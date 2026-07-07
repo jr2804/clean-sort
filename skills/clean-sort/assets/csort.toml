@@ -1,0 +1,28 @@
+# clean-sort configuration template. See references/config.md for the full schema.
+# Install into a project with: `csort config init`
+
+[module]
+sections = [
+    "imports",
+    "typing_imports",
+    "module_constants",
+    "enums",
+    "dataclasses",
+    "classes",
+    "functions",
+    "main_block",
+]
+
+# Per-section in-section strategy: keep | alpha | stepdown | abstraction.
+[strategy]
+enums = "alpha"
+# functions = "stepdown"   # caller before callee
+# classes = "keep"
+
+[class_methods]
+enabled = true
+order = ["public", "protected", "private"]
+method_type_order = ["instance", "class", "static"]
+
+[imports]
+engine = "none"   # none | isort | ruff

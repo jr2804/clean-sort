@@ -1,0 +1,6 @@
+- id: csort
+  name: csort
+  description: AST-based structural sorter for Python source code.
+  entry: csort run --
+  language: python
+  files: \.py$

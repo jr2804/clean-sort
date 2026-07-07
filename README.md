@@ -1,162 +1,189 @@
-# Clean Sort
+# clean-sort
 
-AST-based structural sorter for Python source code
+[![status: alpha](https://img.shields.io/badge/status-alpha-orange)](https://codeberg.org/jr2804/clean-sort)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![python](https://img.shields.io/badge/python-3.11+-blue)](https://www.python.org)
 
-## Features
+**AST-based structural sorter for Python source code.**
 
-- ✅ **UV Package Manager**: Fast, modern Python dependency and virtual environment management
-- ✅ **ty Type Checking**: Strict type checking for all Python code
-- ✅ **Pytest**: Testing framework with 100% coverage requirement
-- ✅ **Ruff**: Fast Python linter and formatter
-- ✅ **codespell**: Spell checker for code and documentation
-- ✅ **mise Task System**: Advanced task runner with DAG dependency management
-- ✅ **Pre-commit Hooks**: Automated code quality checks
-- ✅ **Zensical**: Modern documentation with Material Design theme
-- ✅ **Dynamic Versioning**: Git-based versioning with uv-dynamic-versioning
+`csort` reorders the top-level statements of a Python module into a canonical
+section layout (imports → constants → enums → classes → functions → `main`)
+and reorders the methods inside each class by visibility and type. It is built
+on [`libcst`](https://github.com/Instagram/LibCST), so comments and formatting
+are preserved.
 
-## Installation
+It is a **structural** sorter: it complements `ruff` / `isort` (imports) and
+`black` / `ruff format` (formatting). It does not replace them — run it
+*afterwards*.
 
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/clean-sort.git
-cd clean-sort
+## Install
 
-# Install dependencies
-mise dev
-
-# Or manually
-uv sync --dev
+```shell
+uv tool install clean-sort
+csort --version
 ```
 
-## Usage
+Optional extras:
 
-### Running Tests
-
-```bash
-mise test
-# or
-uv run pytest
+```shell
+uv tool install "clean-sort[isort]"   # isort engine for import sorting
+uv tool install "clean-sort[ruff]"    # bundled ruff (enables `csort ruff ...`)
 ```
 
-### Code Quality
+## Quick start
 
-```bash
-# Run linter
-mise lint
-
-# Format code
-mise format
-
-# Check spelling
-mise spell
-
-# Run all checks
-mise all
+```shell
+csort run src/                 # sort files in place
+csort check src/               # exit 1 if anything would change (CI / pre-commit)
+csort diff src/                # preview changes
+csort config init              # write a csort.toml template
 ```
 
-### CLI Commands
+### Before → after
 
-```bash
-# Default command
-uv run clean_sort
+Given this module:
 
-# Greet someone
-uv run clean_sort greet Alice
+```python
+import sys
 
-# Add numbers
-uv run clean_sort add 5 3
+def main():
+    greet()
 
-# Show version
-uv run clean_sort --version
+def greet():
+    print("hi")
+
+class Service:
+    def _close(self):
+        ...
+    def start(self):
+        ...
+
+MAX_CONN = 10
+
+if __name__ == "__main__":
+    main()
 ```
 
-### Environment Variables
+`csort run` (with `functions = "stepdown"`) produces:
 
-| Variable | Description |
-|----------|-------------|
-| `CLEAN_SORT_CACHE` | Enable/disable caching (true/false) |
-| `CLEAN_SORT_OUTPUT_FILE` | Default output file path |
+```python
+import sys
+
+MAX_CONN = 10
+
+class Service:
+    def start(self):
+        ...
+    def _close(self):     # public methods first, then protected
+
+def main():               # caller before callee (step-down rule)
+    greet()
+
+def greet():
+    print("hi")
+
+if __name__ == "__main__":
+    main()
+```
+
+## Configuration
+
+Discovered from (first wins, walking up from the target file): `--config`,
+`csort.toml`, `.config/csort.toml`, `[tool.csort]` in `pyproject.toml`.
+
+```toml
+[tool.csort.module]
+sections = [
+    "imports", "typing_imports", "module_constants", "enums",
+    "dataclasses", "classes", "functions", "main_block",
+]
+
+[tool.csort.strategy]            # per-section; omit => "keep"
+enums = "alpha"
+functions = "stepdown"           # "alpha" | "stepdown" | "abstraction" | "keep"
+
+[tool.csort.class_methods]       # undersort-style ordering within each class
+enabled = true
+order = ["public", "protected", "private"]
+method_type_order = ["instance", "class", "static"]
+
+[tool.csort.imports]
+engine = "none"                  # "none" | "isort" | "ruff"
+```
+
+### Strategies
+
+| value         | meaning                                            | applies to            |
+|---------------|----------------------------------------------------|-----------------------|
+| `keep`        | preserve original order (default)                  | any section           |
+| `alpha`       | alphabetical by primary name                       | imports, enums        |
+| `stepdown`    | caller before callee (top-down narrative)          | functions, classes    |
+| `abstraction` | callee before caller (low-level utilities first)   | functions, classes    |
+
+> **Caution:** `alpha` on `module_constants` / `classes` / `dataclasses` can
+> break runtime order (interdependent constants, inheritance). Always preview
+> with `csort diff` first.
+
+## Safety model
+
+`csort` is conservative by design:
+
+- **Barriers** — statements that don't map to a configured section (runtime
+  setup like `app = typer.Typer()`) are never moved. Recognised statements only
+  reorder *within* their contiguous barrier-free run, so csort never moves code
+  across a statement it might depend on.
+- **Pinned** — the module docstring and `from __future__ import ...` always stay
+  first.
+- **Opt-out** — a `# csort: off` (or `# nosort`) comment in a file's header
+  skips the file; `class C:  # csort: off` skips that class.
+- **Idempotent** — running `csort` twice never changes a file a second time.
+
+## Programmatic API
+
+```python
+from clean_sort import sort_source, Config
+
+cfg = Config(strategies={"functions": "stepdown"})
+sorted_text = sort_source(source_text, cfg)
+```
+
+## Pre-commit
+
+```yaml
+repos:
+  - repo: https://codeberg.org/jr2804/clean-sort
+    rev: v0.1.0
+    hooks:
+      - id: csort
+```
+
+## Agent skill
+
+An installable agent skill lives in [`skills/clean-sort`](skills/clean-sort).
+Install it for your AI assistant:
+
+```shell
+bun x skills add https://codeberg.org/jr2804/clean-sort.git -s clean-sort -a universal -y
+```
 
 ## Development
 
-### Setting Up Development Environment
-
-```bash
-# Install all dependencies including dev tools
-mise dev
+```shell
+uv sync --dev           # install dev dependencies
+uv run pytest           # tests
+uvx ruff check .        # lint
+uvx ruff format .       # format
 ```
 
-### Pre-commit Hooks
+## Acknowledgements
 
-Install pre-commit hooks to run quality checks before commits:
-
-```bash
-pre-commit install
-pre-commit run --all-files
-```
-
-### Building Documentation
-
-```bash
-mise docs
-```
-
-## Project Structure
-
-```
-clean-sort/
-├── .config/mise/config.toml                # mise tasks/configuration
-├── docs/                                   # Zensical documentation
-├── src/clean_sort/
-│   ├── __init__.py
-│   ├── __about__.py                        # Version info
-│   └── cli/                                # Typer CLI module
-├── tests/                                  # Pytest tests
-├── .pre-commit-config.yaml                 # Pre-commit hooks configuration
-├── ruff.toml                               # Ruff linter configuration
-├── ty.toml                                 # ty type checker configuration
-└── pyproject.toml                          # Project configuration
-```
-
-## Versioning
-
-This project uses **uv-dynamic-versioning** for automatic version management based on Git tags.
-
-- Version is derived from Git tags
-
-- Release tags are expected in `v*` form (e.g., `v0.1.0`)
-
-- Fallback version: `0.0.0` for development mode
-- No need to manually update version strings
-
-
+The in-class method sorter is an adapted reimplementation of
+[undersort](https://github.com/kivicode/undersort) (MIT). Dependency-aware
+function ordering was inspired by [ssort](https://github.com/bwhmather/ssort),
+[sdsort](https://github.com/eirikurt/sdsort) and
+[ABSort](https://github.com/MapleCCC/ABSort). See
+[Credits](https://codeberg.org/jr2804/clean-sort/src/branch/main/docs/credits.md).
 
 ## License
 
-This project is licensed under the **MIT** license.
-
-See the [LICENSE](LICENSE) file for details.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run quality checks: `mise all`
-5. Submit a pull request
-
-## AGENTS.md
-
-This project includes a compact [AGENTS.md](AGENTS.md) baseline that combines strict global engineering guardrails with a DOX-style hierarchy workflow:
-
-- read the AGENTS chain from root to the target path before edits
-- use the nearest AGENTS.md as the local contract
-- update the nearest owning AGENTS.md after meaningful changes
-
-The setup is intentionally lean at project start and expands with child AGENTS.md files only when boundaries become durable.
-
-Acknowledgement: hierarchy concepts are inspired by [agent0ai/dox](https://github.com/agent0ai/dox).
-
-## Support
-
-For issues and feature requests, please use the GitHub issue tracker.
+MIT — see [LICENSE](LICENSE).
