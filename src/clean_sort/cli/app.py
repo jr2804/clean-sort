@@ -231,7 +231,7 @@ def _process_files(files: list[Path], cfg: Config, mode: str) -> tuple[int, list
         elif mode == "diff":
             typer.echo(_diff(original, result, str(file)), nl=False)
     code = 0
-    if mode == "check" and changed:
+    if mode in ("check", "run") and changed:
         code = 1
     if errored:
         code = max(code, 2)
@@ -273,7 +273,11 @@ def run(
     no_class_methods: NoClassMethodsOpt = False,
     no_imports: NoImportsOpt = False,
 ) -> None:
-    """Sort Python files in place (or stdin -> stdout with ``-``)."""
+    """Sort Python files in place (or stdin -> stdout with ``-``).
+
+    Exits with code 1 if any file was changed (pre-commit / CI friendly),
+    2 on errors. stdin mode always exits 0.
+    """
     _run(paths, "run", config, exclude, no_recursive, no_class_methods, no_imports)
 
 
