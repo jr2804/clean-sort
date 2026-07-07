@@ -1,10 +1,31 @@
-"""clean_sort package."""
+"""clean-sort — AST-based structural sorter for Python source code.
+
+Public API:
+
+* :func:`sort_source` — sort a source string in memory.
+* :func:`would_change` — check whether sorting would change a source string.
+* :class:`Config` / :func:`load_config` / :func:`discover` — configuration.
+"""
 
 from __future__ import annotations
 
 import importlib.metadata
 
+from .config import Config, discover
+from .config import load as load_config
+from .pipeline import SectionSorter, sort_source, would_change
+
+__all__ = [
+    "Config",
+    "SectionSorter",
+    "__version__",
+    "discover",
+    "load_config",
+    "sort_source",
+    "would_change",
+]
+
 try:
     __version__ = importlib.metadata.version(__name__)
-except importlib.metadata.PackageNotFoundError:
-    __version__ = "0.0.0"  # Fallback for development mode
+except importlib.metadata.PackageNotFoundError:  # pragma: no cover
+    __version__ = "0.0.0"

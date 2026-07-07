@@ -1,46 +1,356 @@
-"""Typer CLI app for Clean Sort."""
+"""``csort`` command-line interface.
+
+Commands
+--------
+run     sort files in place (or stdin -> stdout with ``-``)
+check   exit non-zero if any file would change (for CI / pre-commit)
+diff    print unified diffs of the changes csort would make
+ruff    proxy to a bundled/installed ruff (``clean-sort[ruff]``)
+config  show resolved config or write a ``csort.toml`` template
+"""
 
 from __future__ import annotations
 
-from importlib.metadata import version
+import difflib
+import fnmatch
+import importlib.util
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from typing import Annotated
 
 import typer
 
-# Version management
-def _get_version() -> str:
-    """Get application version from package metadata."""
-    try:
-        return version("clean_sort")
-    except Exception:
-        return "0.0.0"  # Fallback for development mode
+from clean_sort import Config, __version__, load_config, sort_source
 
+# `app`/`config_app` are runtime setup used by the decorators below; csort treats
+# such unrecognised top-level statements as barriers and will not move them.
 app = typer.Typer(
-    name="clean_sort",
-    help="AST-based structural sorter for Python source code",
-    add_completion=True,
+    name="csort",
+    help="AST-based structural sorter for Python source code.",
     no_args_is_help=True,
+    add_completion=True,
+)
+config_app = typer.Typer(help="Manage csort configuration.", no_args_is_help=True)
+app.add_typer(config_app, name="config")
+
+_EXCLUDE_DIRS = frozenset(
+    {
+        "venv",
+        ".venv",
+        "env",
+        ".env",
+        "__pycache__",
+        "node_modules",
+        ".git",
+        "build",
+        "dist",
+        ".tox",
+        ".mypy_cache",
+        ".pytest_cache",
+        "site-packages",
+    }
 )
 
+ConfigOpt = Annotated[
+    Path | None,
+    typer.Option("--config", help="Path to csort.toml or pyproject.toml."),
+]
+ExcludeOpt = Annotated[
+    list[str] | None,
+    typer.Option("--exclude", "-x", help="Glob pattern to exclude (repeatable)."),
+]
+NoRecursiveOpt = Annotated[
+    bool,
+    typer.Option("--no-recursive", help="Do not descend into subdirectories."),
+]
+NoClassMethodsOpt = Annotated[
+    bool,
+    typer.Option("--no-class-methods", help="Disable in-class method sorting."),
+]
+NoImportsOpt = Annotated[
+    bool,
+    typer.Option("--no-imports", help="Disable the import engine (isort/ruff)."),
+]
+PathsArg = Annotated[
+    list[Path] | None,
+    typer.Argument(help="Python files or directories to sort. Use '-' for stdin."),
+]
+
+
+# ------------------------------------------------------------------------ config
+_DEFAULT_CONFIG = """\
+# clean-sort configuration. See https://codeberg.org/jr2804/clean-sort
+
+[module]
+sections = [
+    "imports",
+    "typing_imports",
+    "module_constants",
+    "enums",
+    "dataclasses",
+    "classes",
+    "functions",
+    "main_block",
+]
+
+# Per-section in-section strategy: keep | alpha | stepdown | abstraction.
+# stepdown/abstraction only affect the `functions` and `classes` sections.
+# NOTE: alpha is safe for imports/enums but can break interdependent
+# constants/classes (runtime order). Check with `csort diff` first.
+[strategy]
+enums = "alpha"
+# functions = "stepdown"
+# classes = "keep"
+
+[class_methods]
+enabled = true
+order = ["public", "protected", "private"]
+method_type_order = ["instance", "class", "static"]
+
+[imports]
+# none (default) | isort | ruff
+engine = "none"
+"""
+
+
 @app.callback(invoke_without_command=True)
-def _callback(
-    version: bool = typer.Option(
-        False,
-        "--version",
-        "-v",
-        help="Show version and exit",
-        is_eager=True,
-    ),
+def _main(
+    ctx: typer.Context,
+    version: Annotated[
+        bool,
+        typer.Option("--version", "-V", is_eager=True, help="Show version and exit."),
+    ] = False,
 ) -> None:
-    """AST-based structural sorter for Python source code"""
+    """AST-based structural sorter for Python source code."""
     if version:
-        typer.echo(_get_version())
+        typer.echo(__version__)
         raise typer.Exit()
+    if ctx.invoked_subcommand is None:
+        typer.echo(__version__)
+
+
+@app.command()
+def version() -> None:
+    """Show the csort version."""
+    typer.echo(__version__)
+
+
+# ----------------------------------------------------------------- file helpers
+def _build_config(
+    explicit: Path | None,
+    no_class_methods: bool,
+    no_imports: bool,
+) -> Config:
+    cfg = load_config(explicit=explicit, start=Path.cwd())
+    if no_class_methods:
+        cfg.class_methods_enabled = False
+    if no_imports:
+        cfg.import_engine = "none"
+    return cfg
+
+
+def _collect(paths: list[Path], recursive: bool, excludes: list[str] | None) -> list[Path]:
+    files: list[Path] = []
+    for path in paths:
+        if path.name == "-":
+            continue
+        if path.is_file():
+            if path.suffix == ".py":
+                files.append(path)
+        elif path.is_dir():
+            pattern = "**/*.py" if recursive else "*.py"
+            files.extend(sorted(path.glob(pattern)))
+    result: list[Path] = []
+    seen: set[str] = set()
+    for file in files:
+        if any(part in _EXCLUDE_DIRS for part in file.parts):
+            continue
+        if excludes and any(fnmatch.fnmatch(str(file), pat) or fnmatch.fnmatch(file.name, pat) for pat in excludes):
+            continue
+        key = str(file.resolve())
+        if key not in seen:
+            seen.add(key)
+            result.append(file)
+    return result
+
+
+def _diff(original: str, result: str, name: str) -> str:
+    return "".join(
+        difflib.unified_diff(
+            original.splitlines(keepends=True),
+            result.splitlines(keepends=True),
+            fromfile=name,
+            tofile=name,
+        )
+    )
+
+
+def _process_stdin(cfg: Config, mode: str) -> int:
+    source = sys.stdin.read()
+    try:
+        result = sort_source(source, cfg, filename="<stdin>")
+    except Exception as exc:  # noqa: BLE001 - surface as CLI error
+        typer.echo(f"csort: error: {exc}", err=True)
+        return 2
+    if mode == "run":
+        sys.stdout.write(result)
+        return 0
+    if mode == "check":
+        return 1 if result != source else 0
+    if mode == "diff" and result != source:
+        sys.stdout.write(_diff(source, result, "<stdin>"))
+    return 0
+
+
+def _process_files(files: list[Path], cfg: Config, mode: str) -> tuple[int, list[Path]]:
+    changed: list[Path] = []
+    errored = False
+    for file in files:
+        try:
+            original = file.read_text(encoding="utf-8")
+        except OSError as exc:
+            typer.echo(f"csort: cannot read {file}: {exc}", err=True)
+            errored = True
+            continue
+        try:
+            result = sort_source(original, cfg, filename=str(file))
+        except Exception as exc:  # noqa: BLE001
+            typer.echo(f"csort: error in {file}: {exc}", err=True)
+            errored = True
+            continue
+        if result == original:
+            continue
+        changed.append(file)
+        if mode == "run":
+            file.write_text(result, encoding="utf-8")
+            typer.echo(f"sorted: {file}")
+        elif mode == "check":
+            typer.echo(f"would sort: {file}")
+        elif mode == "diff":
+            typer.echo(_diff(original, result, str(file)), nl=False)
+    code = 0
+    if mode == "check" and changed:
+        code = 1
+    if errored:
+        code = max(code, 2)
+    return code, changed
+
+
+def _run(
+    paths: list[Path] | None,
+    mode: str,
+    config: Path | None,
+    exclude: list[str] | None,
+    no_recursive: bool,
+    no_class_methods: bool,
+    no_imports: bool,
+) -> None:
+    cfg = _build_config(config, no_class_methods, no_imports)
+    paths = paths or [Path.cwd()]
+    if any(p.name == "-" for p in paths):
+        raise typer.Exit(_process_stdin(cfg, mode))
+    files = _collect(paths, recursive=not no_recursive, excludes=exclude)
+    if not files:
+        typer.echo("csort: no Python files found")
+        raise typer.Exit(0)
+    code, changed = _process_files(files, cfg, mode)
+    if mode == "run":
+        typer.echo(f"done: {len(changed)} file(s) sorted of {len(files)} scanned")
+    elif mode == "check" and not changed:
+        typer.echo(f"ok: {len(files)} file(s) already sorted")
+    raise typer.Exit(code)
+
+
+# ---------------------------------------------------------------------- commands
+@app.command()
+def run(
+    paths: PathsArg = None,
+    config: ConfigOpt = None,
+    exclude: ExcludeOpt = None,
+    no_recursive: NoRecursiveOpt = False,
+    no_class_methods: NoClassMethodsOpt = False,
+    no_imports: NoImportsOpt = False,
+) -> None:
+    """Sort Python files in place (or stdin -> stdout with ``-``)."""
+    _run(paths, "run", config, exclude, no_recursive, no_class_methods, no_imports)
+
+
+@app.command()
+def check(
+    paths: PathsArg = None,
+    config: ConfigOpt = None,
+    exclude: ExcludeOpt = None,
+    no_recursive: NoRecursiveOpt = False,
+    no_class_methods: NoClassMethodsOpt = False,
+    no_imports: NoImportsOpt = False,
+) -> None:
+    """Exit non-zero if any file would be changed by sorting."""
+    _run(paths, "check", config, exclude, no_recursive, no_class_methods, no_imports)
+
+
+@app.command()
+def diff(
+    paths: PathsArg = None,
+    config: ConfigOpt = None,
+    exclude: ExcludeOpt = None,
+    no_recursive: NoRecursiveOpt = False,
+    no_class_methods: NoClassMethodsOpt = False,
+    no_imports: NoImportsOpt = False,
+) -> None:
+    """Print unified diffs of the changes csort would make."""
+    _run(paths, "diff", config, exclude, no_recursive, no_class_methods, no_imports)
+
+
+# -------------------------------------------------------------------------- ruff
+@app.command(
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+    help="Proxy to a bundled/installed ruff (requires clean-sort[ruff]).",
+)
+def ruff(ctx: typer.Context) -> None:
+    """Forward all arguments to ruff."""
+    if importlib.util.find_spec("ruff") is not None:
+        cmd = [sys.executable, "-m", "ruff", *ctx.args]
+    elif shutil.which("ruff") is not None:
+        cmd = ["ruff", *ctx.args]
+    else:
+        typer.echo(
+            "csort: ruff is not installed. Install with `uv tool install clean-sort[ruff]` or install ruff separately.",
+            err=True,
+        )
+        raise typer.Exit(127)
+    completed = subprocess.run(cmd, check=False)  # noqa: S603 - trusted, user-supplied
+    raise typer.Exit(completed.returncode)
+
+
+@config_app.command("init")
+def config_init(
+    force: Annotated[bool, typer.Option("--force", help="Overwrite an existing csort.toml.")] = False,
+) -> None:
+    """Write a csort.toml template into the current directory."""
+    dest = Path("csort.toml")
+    if dest.exists() and not force:
+        typer.echo(f"csort: {dest} already exists (use --force to overwrite)")
+        raise typer.Exit(1)
+    dest.write_text(_DEFAULT_CONFIG, encoding="utf-8")
+    typer.echo(f"wrote {dest}")
+
+
+@config_app.command("show")
+def config_show(config: ConfigOpt = None) -> None:
+    """Print the resolved configuration for the current directory."""
+    cfg = load_config(explicit=config, start=Path.cwd())
+    typer.echo(f"# source: {cfg.config_path or '<defaults>'}")
+    typer.echo(f"sections = {cfg.sections}")
+    typer.echo(f"strategies = {cfg.strategies}")
+    typer.echo(f"class_methods.enabled = {cfg.class_methods_enabled}")
+    typer.echo(f"class_methods.order = {cfg.class_methods_order}")
+    typer.echo(f"class_methods.method_type_order = {cfg.class_methods_type_order}")
+    typer.echo(f"classification.constants_pattern = {cfg.constants_pattern!r}")
+    typer.echo(f"imports.engine = {cfg.import_engine}")
 
 
 def main() -> None:
-    """Entry point for the CLI application."""
+    """Entry point for the ``csort`` console script."""
     app()
-
-
-# Import commands to register them with app
-from clean_sort.cli import commands  # noqa: E402, F401
