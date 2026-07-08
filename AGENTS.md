@@ -104,6 +104,26 @@ When a user requests a durable behavior change, record it in the nearest applica
 
 ## Project-specific instructions
 
+### Releasing
+
+Every push to `main` runs `.forgejo/workflows/release.yml`, which auto-creates a
+CalVer tag (`YYYY.M.D` / `YYYY.M.D.N`) and publishes a Forgejo release with the
+built wheel + sdist + LLM-generated notes.
+
+To push **without** triggering a release (WIP, simple code exchange, doc-only),
+include `[skip release]` in the commit message. The workflow's `if` clause
+filters on `github.event.head_commit.message`, so the token must appear in the
+**head commit** of the push:
+
+```shell
+git commit -m "wip: scratch refactor [skip release]"
+git push origin main   # no tag, no release
+```
+
+If a push contains multiple commits, only the head commit's message is checked.
+Squash or reword the head commit if an earlier commit in the push must be the
+one marked `[skip release]`.
+
 ### Project Structure
 
 Generate project structure with:

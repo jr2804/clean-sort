@@ -1,4 +1,4 @@
-# Auto-tag and release every push to master.
+# Auto-tag and release every push to main.
 #
 # Creates a calendar version tag (YYYY.M.D / YYYY.M.D.N) and publishes
 # a Forgejo release with the built wheel + sdist + LLM-generated release notes.
@@ -18,7 +18,12 @@ name: Tag and Release
 
 on:
   push:
-    branches: [master]
+    branches: [main]
+
+# Grant the auto-injected workflow token write access so it can push the tag.
+# Overrides repos whose default workflow-token permission is read-only.
+permissions:
+  contents: write
 
 jobs:
   release:
@@ -156,35 +161,27 @@ jobs:
       # --- Create Forgejo release and attach build artifacts ---
       - name: Create release
         run: |
-          set -x
           owner="${{ github.repository_owner }}"
           repo="${{ github.repository }}"
           ver="${{ steps.version.outputs.version }}"
           body=$(cat /tmp/release-body.md)
-
-          # Build JSON payload with python3 (more robust than jq for arbitrary body text)
-          payload=$(python3 -c "
-import json, sys
-data = {
-    'tag_name': sys.argv[1],
-    'name': sys.argv[2],
-    'body': sys.argv[3],
-    'prerelease': False,
-}
-print(json.dumps(data))
-" "$ver" "$ver" "$body")
 
           # Create the release via Forgejo API
           response=$(curl -s -X POST \
             "https://codeberg.org/api/v1/repos/${repo}/releases" \
             -H "Authorization: Bearer ${FORGEJO_TOKEN}" \
             -H "Content-Type: application/json" \
-            -d "$payload")
+            -d "$(jq -n \
+              --arg tag "$ver" \
+              --arg name "$ver" \
+              --arg body "$body" \
+              '{tag_name: $tag, name: $name, body: $body, prerelease: false}'
+            )")
 
-          release_id=$(echo "$response" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('id') or '')")
+          release_id=$(echo "$response" | jq -r '.id // empty')
           if [ -z "$release_id" ]; then
             echo "ERROR: Release creation failed:"
-            echo "$response" | python3 -m json.tool 2>/dev/null || echo "$response"
+            echo "$response" | jq .
             exit 1
           fi
           echo "Release created: id=${release_id}"
