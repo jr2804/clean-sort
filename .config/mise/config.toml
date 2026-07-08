@@ -15,6 +15,9 @@ bun = "latest"
 # CLI tools rg and tree-cli -> use `rg --files | tree-cli --fromfile` to get a nice tree view of the project files
 ripgrep = "latest"
 "github:peteretelej/tree" = { version = "latest", rename_exe = "tree-cli" }
+jq = "latest"
+"github:gastownhall/beads" = "latest"
+"github:dolthub/dolt" = "latest"
 
 [settings.npm]
 package_manager = "bun"
