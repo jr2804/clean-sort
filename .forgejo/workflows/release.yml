@@ -9,6 +9,9 @@
 #   3. Set MISTRAL_API_KEY secret (optional; falls back to raw git log):
 #      fj actions secrets create MISTRAL_API_KEY "<your-key>"
 #
+# FORGEJO_TOKEN is automatically provided by Forgejo Actions as
+# secrets.GITHUB_TOKEN and is mapped into the job environment below.
+#
 # https://forgejo.codeberg.page/docs/next/user/actions/
 
 name: Tag and Release
@@ -25,6 +28,8 @@ jobs:
     if: ${{ !contains(github.event.head_commit.message, '[skip release]') }}
     runs-on: codeberg-small
     timeout-minutes: 10
+    env:
+      FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       # --- Checkout with full history so we can inspect tags ---
