@@ -28,8 +28,6 @@ jobs:
     if: ${{ !contains(github.event.head_commit.message, '[skip release]') }}
     runs-on: codeberg-small
     timeout-minutes: 10
-    env:
-      FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       # --- Checkout with full history so we can inspect tags ---
@@ -158,27 +156,35 @@ jobs:
       # --- Create Forgejo release and attach build artifacts ---
       - name: Create release
         run: |
+          set -x
           owner="${{ github.repository_owner }}"
           repo="${{ github.repository }}"
           ver="${{ steps.version.outputs.version }}"
           body=$(cat /tmp/release-body.md)
+
+          # Build JSON payload with python3 (more robust than jq for arbitrary body text)
+          payload=$(python3 -c "
+import json, sys
+data = {
+    'tag_name': sys.argv[1],
+    'name': sys.argv[2],
+    'body': sys.argv[3],
+    'prerelease': False,
+}
+print(json.dumps(data))
+" "$ver" "$ver" "$body")
 
           # Create the release via Forgejo API
           response=$(curl -s -X POST \
             "https://codeberg.org/api/v1/repos/${repo}/releases" \
             -H "Authorization: Bearer ${FORGEJO_TOKEN}" \
             -H "Content-Type: application/json" \
-            -d "$(jq -n \
-              --arg tag "$ver" \
-              --arg name "$ver" \
-              --arg body "$body" \
-              '{tag_name: $tag, name: $name, body: $body, prerelease: false}'
-            )")
+            -d "$payload")
 
-          release_id=$(echo "$response" | jq -r '.id // empty')
+          release_id=$(echo "$response" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('id') or '')")
           if [ -z "$release_id" ]; then
             echo "ERROR: Release creation failed:"
-            echo "$response" | jq .
+            echo "$response" | python3 -m json.tool 2>/dev/null || echo "$response"
             exit 1
           fi
           echo "Release created: id=${release_id}"
