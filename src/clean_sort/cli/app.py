@@ -5,7 +5,6 @@ Commands
 run     sort files in place (or stdin -> stdout with ``-``)
 check   exit non-zero if any file would change (for CI / pre-commit)
 diff    print unified diffs of the changes csort would make
-ruff    proxy to a bundled/installed ruff (``clean-sort[ruff]``)
 config  show resolved config or write a ``csort.toml`` template
 """
 
@@ -13,9 +12,6 @@ from __future__ import annotations
 
 import difflib
 import fnmatch
-import importlib.util
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 from typing import Annotated
@@ -69,10 +65,6 @@ NoClassMethodsOpt = Annotated[
     bool,
     typer.Option("--no-class-methods", help="Disable in-class method sorting."),
 ]
-NoImportsOpt = Annotated[
-    bool,
-    typer.Option("--no-imports", help="Disable the import engine (isort/ruff)."),
-]
 PathsArg = Annotated[
     list[Path] | None,
     typer.Argument(help="Python files or directories to sort. Use '-' for stdin."),
@@ -108,10 +100,6 @@ enums = "alpha"
 enabled = true
 order = ["public", "protected", "private"]
 method_type_order = ["instance", "class", "static"]
-
-[imports]
-# none (default) | isort | ruff
-engine = "none"
 """
 
 
@@ -141,13 +129,10 @@ def version() -> None:
 def _build_config(
     explicit: Path | None,
     no_class_methods: bool,
-    no_imports: bool,
 ) -> Config:
     cfg = load_config(explicit=explicit, start=Path.cwd())
     if no_class_methods:
         cfg.class_methods_enabled = False
-    if no_imports:
-        cfg.import_engine = "none"
     return cfg
 
 
@@ -245,9 +230,8 @@ def _run(
     exclude: list[str] | None,
     no_recursive: bool,
     no_class_methods: bool,
-    no_imports: bool,
 ) -> None:
-    cfg = _build_config(config, no_class_methods, no_imports)
+    cfg = _build_config(config, no_class_methods)
     paths = paths or [Path.cwd()]
     if any(p.name == "-" for p in paths):
         raise typer.Exit(_process_stdin(cfg, mode))
@@ -271,14 +255,13 @@ def run(
     exclude: ExcludeOpt = None,
     no_recursive: NoRecursiveOpt = False,
     no_class_methods: NoClassMethodsOpt = False,
-    no_imports: NoImportsOpt = False,
 ) -> None:
     """Sort Python files in place (or stdin -> stdout with ``-``).
 
     Exits with code 1 if any file was changed (pre-commit / CI friendly),
     2 on errors. stdin mode always exits 0.
     """
-    _run(paths, "run", config, exclude, no_recursive, no_class_methods, no_imports)
+    _run(paths, "run", config, exclude, no_recursive, no_class_methods)
 
 
 @app.command()
@@ -288,10 +271,9 @@ def check(
     exclude: ExcludeOpt = None,
     no_recursive: NoRecursiveOpt = False,
     no_class_methods: NoClassMethodsOpt = False,
-    no_imports: NoImportsOpt = False,
 ) -> None:
     """Exit non-zero if any file would be changed by sorting."""
-    _run(paths, "check", config, exclude, no_recursive, no_class_methods, no_imports)
+    _run(paths, "check", config, exclude, no_recursive, no_class_methods)
 
 
 @app.command()
@@ -301,31 +283,9 @@ def diff(
     exclude: ExcludeOpt = None,
     no_recursive: NoRecursiveOpt = False,
     no_class_methods: NoClassMethodsOpt = False,
-    no_imports: NoImportsOpt = False,
 ) -> None:
     """Print unified diffs of the changes csort would make."""
-    _run(paths, "diff", config, exclude, no_recursive, no_class_methods, no_imports)
-
-
-# -------------------------------------------------------------------------- ruff
-@app.command(
-    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
-    help="Proxy to a bundled/installed ruff (requires clean-sort[ruff]).",
-)
-def ruff(ctx: typer.Context) -> None:
-    """Forward all arguments to ruff."""
-    if importlib.util.find_spec("ruff") is not None:
-        cmd = [sys.executable, "-m", "ruff", *ctx.args]
-    elif shutil.which("ruff") is not None:
-        cmd = ["ruff", *ctx.args]
-    else:
-        typer.echo(
-            "csort: ruff is not installed. Install with `uv tool install clean-sort[ruff]` or install ruff separately.",
-            err=True,
-        )
-        raise typer.Exit(127)
-    completed = subprocess.run(cmd, check=False)  # noqa: S603 - trusted, user-supplied
-    raise typer.Exit(completed.returncode)
+    _run(paths, "diff", config, exclude, no_recursive, no_class_methods)
 
 
 @config_app.command("init")
@@ -352,7 +312,6 @@ def config_show(config: ConfigOpt = None) -> None:
     typer.echo(f"class_methods.order = {cfg.class_methods_order}")
     typer.echo(f"class_methods.method_type_order = {cfg.class_methods_type_order}")
     typer.echo(f"classification.constants_pattern = {cfg.constants_pattern!r}")
-    typer.echo(f"imports.engine = {cfg.import_engine}")
 
 
 def main() -> None:
