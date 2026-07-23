@@ -10,7 +10,6 @@ import libcst as cst
 from . import undersort
 from .classify import classify, is_future_import, is_module_docstring
 from .config import Config
-from .imports import sort_imports
 from .sorters import alpha, dependency
 
 __all__ = ["SectionSorter", "sort_source", "would_change"]
@@ -139,8 +138,6 @@ def sort_source(source: str, cfg: Config, *, filename: str = "<unknown>") -> str
     4. reorder top-level statements by section;
     5. (optional) reorder methods within each class.
     """
-    if cfg.import_engine == "isort":
-        source = sort_imports(source, cfg)
     module = cst.parse_module(source)
     if undersort.file_disabled(module):
         return source

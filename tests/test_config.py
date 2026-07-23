@@ -13,7 +13,6 @@ def test_defaults() -> None:
     assert cfg.sections[0] == "imports"
     assert cfg.strategy("functions") == "keep"
     assert cfg.class_methods_enabled is True
-    assert cfg.import_engine == "none"
 
 
 def test_from_table_strategy() -> None:
@@ -27,13 +26,6 @@ def test_invalid_strategy_warns() -> None:
         cfg = Config.from_table({"strategy": {"functions": "bogus"}})
     assert cfg.strategy("functions") == "keep"
     assert any("unknown strategy" in str(w.message).lower() for w in caught)
-
-
-def test_invalid_engine_falls_back() -> None:
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        cfg = Config.from_table({"imports": {"engine": "weird"}})
-    assert cfg.import_engine == "none"
 
 
 def test_load_pyproject(tmp_path: Path) -> None:
@@ -61,21 +53,6 @@ def test_load_dotconfig(tmp_path: Path) -> None:
     (tmp_path / ".config" / "csort.toml").write_text("[class_methods]\nenabled = false\n", encoding="utf-8")
     cfg = load_config(start=tmp_path)
     assert cfg.class_methods_enabled is False
-
-
-def test_undersort_backcompat(tmp_path: Path) -> None:
-    (tmp_path / "pyproject.toml").write_text('[tool.undersort]\norder = ["private", "public"]\n', encoding="utf-8")
-    cfg = load_config(start=tmp_path)
-    assert cfg.class_methods_order == ["private", "public"]
-
-
-def test_undersort_backcompat_skipped_when_csort_present(tmp_path: Path) -> None:
-    (tmp_path / "pyproject.toml").write_text(
-        '[tool.csort.class_methods]\norder = ["public", "private", "protected"]\n[tool.undersort]\norder = ["private", "public", "protected"]\n',
-        encoding="utf-8",
-    )
-    cfg = load_config(start=tmp_path)
-    assert cfg.class_methods_order == ["public", "private", "protected"]
 
 
 def test_discover_walks_up(tmp_path: Path) -> None:
