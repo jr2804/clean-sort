@@ -1,0 +1,43 @@
+
+[tools]
+"github:yoanbernabeu/grepai" = "latest"
+"github:AlmogBaku/debug-skill" = "latest"
+"github:rtk-ai/rtk" = "latest"
+"github:djinn-soul/CytoScnPy" = "latest"
+"npm:@colbymchenry/codegraph" = "latest"
+"github:ChuprinaDaria/Vibecode-Cleaner-Fartrun" = "latest"
+"pipx:sloppylint" = "latest"
+"github:gastownhall/beads" = "latest"
+"github:dolthub/dolt" = "latest"
+"pipx:beads-mcp" = "latest"
+"pipx:ai-slop-detector" = { version = "latest", extras = ["all"] }
+"npm:@yuvrajangadsingh/vibecheck" = "latest"
+"npm:aislop" = "latest"
+"pipx:repowise" = "latest"
+"github:1broseidon/ketch" = "latest"
+
+
+[tasks.add-mcp-servers]
+description = "Register MCP servers with AI assistants"
+depends = ["dev"]
+usage = '''
+arg "<ai_agent>" help="AI assistant: claude, gemini, copilot, opencode, ... (see https://github.com/neondatabase/add-mcp)"
+'''
+shell = "pwsh -NoProfile -Command"
+run = [
+	"cls",
+	'bun x add-mcp -y -a {{usage.ai_agent}} -n grepai --args mcp-serve grepai',
+	"bun x add-mcp -y -a {{usage.ai_agent}} -n cytoscnpy-mcp --args mcp-server cytoscnpy",
+	'bun x add-mcp -y -a {{usage.ai_agent}} -n codegraph --args serve --args --mcp codegraph',
+
+	'$cgTarget = switch ("{{usage.ai_agent}}") { "copilot" { "codex" } "claude" { "claude" } "cursor" { "cursor" } "codex" { "codex" } "opencode" { "opencode" } "hermes" { "hermes" } "gemini" { "gemini" } "antigravity" { "antigravity" } "kiro" { "kiro" } Default { "auto" } }; codegraph install --target=$cgTarget --yes',
+
+	'bun x add-mcp -y -a {{usage.ai_agent}} -n fartrun --args mcp fartrun',
+	'bun x add-mcp -y -a {{usage.ai_agent}} -n vibecheck --args --mcp vibecheck',
+	'bun x add-mcp -y -a {{usage.ai_agent}} -n beads beads-mcp',
+	'bun x add-mcp -y -a {{usage.ai_agent}} -n aislop --args -y --args aislop-mcp npx',
+	'bun x add-mcp -y -a {{usage.ai_agent}} -n repowise --args mcp --args . repowise',
+	'bun x add-mcp -y -a {{usage.ai_agent}} -n ketch --args mcp --args serve ketch',
+]
+
+
