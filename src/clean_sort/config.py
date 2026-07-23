@@ -7,9 +7,6 @@ Config is read from (first match wins, walking up from the target file):
 * ``.config/csort.toml`` in the current or any parent directory
 * ``[tool.csort]`` in ``pyproject.toml``
 
-For backwards-compatibility, ``[tool.undersort]`` is also consulted for the
-class-method ``order`` / ``method_type_order`` when
-``[tool.csort.class_methods]`` does not set them.
 """
 
 from __future__ import annotations
@@ -35,7 +32,6 @@ RECOGNIZED_SECTIONS: tuple[str, ...] = (
 DEFAULT_SECTIONS: list[str] = list(RECOGNIZED_SECTIONS)
 
 VALID_STRATEGIES: frozenset[str] = frozenset({"keep", "alpha", "stepdown", "abstraction"})
-VALID_ENGINES: frozenset[str] = frozenset({"none", "isort", "ruff"})
 _VALID_VIS = frozenset({"public", "protected", "private"})
 _VALID_MTYPES = frozenset({"instance", "class", "static"})
 
@@ -54,8 +50,6 @@ class Config:
         class_methods_enabled: Reorder methods *within* each class (undersort).
         class_methods_order: Method visibility ordering.
         class_methods_type_order: Method-type ordering within each visibility.
-        import_engine: Import-block engine (``"none"`` disables import sorting).
-        import_extra_args: Extra args for the isort engine (forwarded to ``isort``).
         constants_pattern: Regex for the ``module_constants`` classification.
         unknown_section: Bucket name for unrecognised top-level nodes. Nodes in a
             bucket that is absent from ``sections`` are appended at the end,
@@ -68,8 +62,6 @@ class Config:
     class_methods_enabled: bool = True
     class_methods_order: list[str] = field(default_factory=lambda: ["public", "protected", "private"])
     class_methods_type_order: list[str] = field(default_factory=lambda: ["instance", "class", "static"])
-    import_engine: ImportEngine = "none"
-    import_extra_args: list[str] = field(default_factory=list)
     constants_pattern: str = r"^[A-Z_][A-Z0-9_]*$"
     unknown_section: str = "other"
     config_path: Path | None = None
@@ -108,21 +100,6 @@ class Config:
             cfg.class_methods_enabled = bool(cm.get("enabled", cfg.class_methods_enabled))
             cfg._set_order(cm.get("order"), attr="class_methods_order")
             cfg._set_order(cm.get("method_type_order"), attr="class_methods_type_order")
-
-        imports = data.get("imports", {}) or {}
-        if isinstance(imports, dict):
-            engine = imports.get("engine", cfg.import_engine)
-            if engine in VALID_ENGINES:
-                cfg.import_engine = engine  # type: ignore[assignment]
-            elif engine != "none":
-                warnings.warn(
-                    f"csort: unknown import engine {engine!r}; defaulting to 'none'",
-                    stacklevel=2,
-                )
-                cfg.import_engine = "none"
-            extra = imports.get("extra_args") or imports.get("isort_args") or []
-            if isinstance(extra, list):
-                cfg.import_extra_args = [str(a) for a in extra]
 
         classification = data.get("classification", {}) or {}
         if isinstance(classification, dict) and "constants_pattern" in classification:
@@ -174,7 +151,7 @@ def discover(start: Path | None = None) -> Path | None:
             except (tomllib.TOMLDecodeError, OSError):
                 continue
             tool = data.get("tool", {})
-            if tool.get("csort") or tool.get("undersort"):
+            if tool.get("csort"):
                 return pyproject
     return None
 
@@ -202,17 +179,7 @@ def load(
     table = _csort_table_from_data(data, is_pyproject=is_pyproject)
     cfg = Config.from_table(table, path=path)
 
-    # Backwards-compat: [tool.undersort] provides class-method ordering.
-    if is_pyproject:
-        undersort_table = data.get("tool", {}).get("undersort", {})
-        if isinstance(undersort_table, dict) and undersort_table and "class_methods" not in (table or {}):
-            cfg._set_order(undersort_table.get("order"), attr="class_methods_order")
-            cfg._set_order(
-                undersort_table.get("method_type_order"),
-                attr="class_methods_type_order",
-            )
     return cfg
 
 
 SectionStrategy = Literal["keep", "alpha", "stepdown", "abstraction"]
-ImportEngine = Literal["none", "isort", "ruff"]
