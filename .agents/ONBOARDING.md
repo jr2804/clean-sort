@@ -1,6 +1,6 @@
 # Onboarding — clean-sort
 
-One-line project description: A clean, safe, deterministic Python import sorter with comment preservation and stepdown/abstraction sorting.
+One-line project description: A clean, safe, deterministic Python module reorganizer that groups imports/globals/constants/classes/methods/etc into the right order.
 
 ## Entry points
 

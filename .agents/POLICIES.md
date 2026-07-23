@@ -30,4 +30,5 @@ If rules conflict, lower-numbered priority wins:
 
 - Always use `csort` on modified files before committing.
 - Keep the codebase idempotent under `csort`.
-- Document all new features in the README.
+- Focus on module reorganization (grouping imports/globals/constants/classes/methods/etc).
+- Skip ruff subcommands and integration with other sorting tools (isort, undersort, etc.).
