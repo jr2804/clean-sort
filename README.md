@@ -4,30 +4,21 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![python](https://img.shields.io/badge/python-3.11+-blue)](https://www.python.org)
 
-**AST-based structural sorter for Python source code.**
+**AST-based Python module reorganizer.**
 
 `csort` reorders the top-level statements of a Python module into a canonical
-section layout (imports → constants → enums → classes → functions → `main`)
+section layout (imports → globals → constants → classes → functions → `main`)
 and reorders the methods inside each class by visibility and type. It is built
 on [`libcst`](https://github.com/Instagram/LibCST), so comments and formatting
 are preserved.
 
-It is a **structural** sorter: it complements `ruff` / `isort` (imports) and
-`black` / `ruff format` (formatting). It does not replace them — run it
-*afterwards*.
+It is a **module reorganizer**: it focuses on grouping and ordering imports/globals/constants/classes/methods/etc. It does not integrate with other sorting tools (isort, undersort, etc.) or provide ruff subcommands.
 
 ## Install
 
 ```shell
 uv tool install clean-sort
 csort --version
-```
-
-Optional extras:
-
-```shell
-uv tool install "clean-sort[isort]"   # isort engine for import sorting
-uv tool install "clean-sort[ruff]"    # bundled ruff (enables `csort ruff ...`)
 ```
 
 ## Quick start
@@ -107,8 +98,6 @@ enabled = true
 order = ["public", "protected", "private"]
 method_type_order = ["instance", "class", "static"]
 
-[tool.csort.imports]
-engine = "none"                  # "none" | "isort" | "ruff"
 ```
 
 ### Strategies
