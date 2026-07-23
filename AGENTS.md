@@ -47,7 +47,11 @@ If rules conflict, lower-numbered priority wins:
 ## Evidence and Workflow
 
 - Gather evidence proportional to risk.
-- For behavioral/API/dependency changes, trace execution path, constraints, and regression surface before editing.
+- For behavioral/API/dependency changes, trace execution pat
+
+## ⛔ No Patching
+
+Do not patch this file. All changes must be made through the proper DOX process.h, constraints, and regression surface before editing.
 - Prefer the smallest correct change using existing abstractions and style.
 - Review/debug/analysis requests do not require code changes once findings are evidenced.
 - Use subagents only as a true parallel batch: use 2+ subagents or none.
