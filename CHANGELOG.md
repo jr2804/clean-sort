@@ -9,4 +9,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Initial project structure from [copier-uv-plus](https://github.com/Jan Reimes/copier-uv-plus).
+- Initial project structure from [copier-uv-plus](<https://github.com/Jan> Reimes/copier-uv-plus).
