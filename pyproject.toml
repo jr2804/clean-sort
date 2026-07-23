@@ -1,14 +1,14 @@
 [project]
 name = "clean-sort"
 dynamic = ["version"]
-description = "AST-based structural sorter for Python source code"
+description = "AST-based Python module reorganizer"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11"
 authors = [
     { name = "Jan Reimes", email = "Jan.Reimes@head-acoustics.com" }
 ]
-keywords = ["sort", "sorting", "ast", "cst", "refactor", "clean-code", "isort", "ruff", "formatter"]
+keywords = ["sort", "sorting", "ast", "cst", "refactor", "clean-code"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
@@ -28,11 +28,6 @@ dependencies = [
     "libcst>=1.1.0",
     "typer>=0.12.0",
 ]
-
-[project.optional-dependencies]
-isort = ["isort>=5.13"]
-ruff = ["ruff>=0.6"]
-all = ["isort>=5.13", "ruff>=0.6"]
 
 [dependency-groups]
 dev = [
