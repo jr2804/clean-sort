@@ -43,3 +43,6 @@ skills-lock.json
 *.db
 .beads-credential-key
 config/mcporter.json
+
+# Beads / Dolt files (added by bd init)
+.beads/proxieddb/
