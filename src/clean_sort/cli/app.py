@@ -15,11 +15,12 @@ import fnmatch
 import sys
 import warnings
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 
 from clean_sort import VALID_STRATEGIES, Config, __version__, load_config, sort_source
+from clean_sort.config import SectionStrategy
 
 # `app`/`config_app` are runtime setup used by the decorators below; csort treats
 # such unrecognised top-level statements as barriers and will not move them.
@@ -161,7 +162,7 @@ def _build_config(
             name, value = item.split("=", 1)
             name, value = name.strip(), value.strip()
             if value in VALID_STRATEGIES:
-                cfg.strategies[name] = value  # type: ignore[assignment]
+                cfg.strategies[name] = cast(SectionStrategy, value)
             else:
                 warnings.warn(
                     f"csort: unknown strategy {value!r} for section {name!r}; ignoring",

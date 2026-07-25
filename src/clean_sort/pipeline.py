@@ -53,7 +53,7 @@ class SectionSorter(cst.CSTTransformer):
                 remainder.append(node)
         pinned.extend(futures)
 
-        tokens: list[tuple[str, object]] = []
+        new_rest: list[cst.CSTNode] = []
         current: list[tuple[str, cst.CSTNode]] = []
         for node in remainder:
             section = classify(node, self.cfg)
@@ -61,18 +61,11 @@ class SectionSorter(cst.CSTTransformer):
                 current.append((section, node))
             else:
                 if current:
-                    tokens.append(("seg", current))
+                    new_rest.extend(self._reorder_segment(current))
                     current = []
-                tokens.append(("barrier", node))
+                new_rest.append(node)
         if current:
-            tokens.append(("seg", current))
-
-        new_rest: list[cst.CSTNode] = []
-        for kind, payload in tokens:
-            if kind == "barrier":
-                new_rest.append(payload)  # type: ignore[arg-type]
-            else:
-                new_rest.extend(self._reorder_segment(payload))  # type: ignore[arg-type]
+            new_rest.extend(self._reorder_segment(current))
 
         if pinned:
             new_body: tuple[cst.CSTNode, ...] = tuple(pinned) + tuple(new_rest)
