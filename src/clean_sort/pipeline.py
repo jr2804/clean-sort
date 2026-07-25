@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import libcst as cst
 
-from . import undersort
+from . import transforms, undersort
 from .classify import classify, is_future_import, is_module_docstring
 from .config import Config
 from .sorters import alpha, dependency
@@ -133,6 +133,7 @@ def sort_source(source: str, cfg: Config, *, filename: str = "<unknown>") -> str
     module = cst.parse_module(source)
     if undersort.file_disabled(module):
         return source
+    module = transforms.apply_transforms(module, cfg)
     new_module = module.visit(SectionSorter(cfg))
     if cfg.class_methods_enabled:
         new_module = new_module.visit(undersort.MethodSorter(cfg.class_methods_order, cfg.class_methods_type_order))

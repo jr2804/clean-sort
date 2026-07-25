@@ -81,6 +81,20 @@ StrategyOverridesOpt = Annotated[
         help="Override per-section strategies, e.g. 'functions=alpha,classes=keep'.",
     ),
 ]
+HoistInlineImportsOpt = Annotated[
+    bool,
+    typer.Option(
+        "--hoist-inline-imports",
+        help="Move imports nested inside function bodies to the top of the module.",
+    ),
+]
+RemoveTypeCheckingOpt = Annotated[
+    bool,
+    typer.Option(
+        "--remove-type-checking",
+        help="Delete if TYPE_CHECKING: guards and hoist their imports to module level.",
+    ),
+]
 PathsArg = Annotated[
     list[Path] | None,
     typer.Argument(help="Python files or directories to sort. Use '-' for stdin."),
@@ -147,10 +161,16 @@ def _build_config(
     no_class_methods: bool,
     section_only: str | None = None,
     strategy_overrides: str | None = None,
+    hoist_inline_imports: bool = False,
+    remove_type_checking: bool = False,
 ) -> Config:
     cfg = load_config(explicit=explicit, start=Path.cwd())
     if no_class_methods:
         cfg.class_methods_enabled = False
+    if hoist_inline_imports:
+        cfg.hoist_inline_imports = True
+    if remove_type_checking:
+        cfg.remove_type_checking = True
     if section_only:
         cfg.sections = [s.strip() for s in section_only.split(",") if s.strip()]
     if strategy_overrides:
@@ -267,8 +287,17 @@ def _run(
     no_class_methods: bool,
     section_only: str | None = None,
     strategy_overrides: str | None = None,
+    hoist_inline_imports: bool = False,
+    remove_type_checking: bool = False,
 ) -> None:
-    cfg = _build_config(config, no_class_methods, section_only, strategy_overrides)
+    cfg = _build_config(
+        config,
+        no_class_methods,
+        section_only,
+        strategy_overrides,
+        hoist_inline_imports=hoist_inline_imports,
+        remove_type_checking=remove_type_checking,
+    )
     paths = paths or [Path.cwd()]
     if any(p.name == "-" for p in paths):
         raise typer.Exit(_process_stdin(cfg, mode))
@@ -294,13 +323,26 @@ def run(
     no_class_methods: NoClassMethodsOpt = False,
     section_only: SectionOnlyOpt = None,
     strategy_overrides: StrategyOverridesOpt = None,
+    hoist_inline_imports: HoistInlineImportsOpt = False,
+    remove_type_checking: RemoveTypeCheckingOpt = False,
 ) -> None:
     """Sort Python files in place (or stdin -> stdout with ``-``).
 
     Exits with code 1 if any file was changed (pre-commit / CI friendly),
     2 on errors. stdin mode always exits 0.
     """
-    _run(paths, "run", config, exclude, no_recursive, no_class_methods, section_only, strategy_overrides)
+    _run(
+        paths,
+        "run",
+        config,
+        exclude,
+        no_recursive,
+        no_class_methods,
+        section_only,
+        strategy_overrides,
+        hoist_inline_imports=hoist_inline_imports,
+        remove_type_checking=remove_type_checking,
+    )
 
 
 @app.command()
@@ -312,9 +354,22 @@ def check(
     no_class_methods: NoClassMethodsOpt = False,
     section_only: SectionOnlyOpt = None,
     strategy_overrides: StrategyOverridesOpt = None,
+    hoist_inline_imports: HoistInlineImportsOpt = False,
+    remove_type_checking: RemoveTypeCheckingOpt = False,
 ) -> None:
     """Exit non-zero if any file would be changed by sorting."""
-    _run(paths, "check", config, exclude, no_recursive, no_class_methods, section_only, strategy_overrides)
+    _run(
+        paths,
+        "check",
+        config,
+        exclude,
+        no_recursive,
+        no_class_methods,
+        section_only,
+        strategy_overrides,
+        hoist_inline_imports=hoist_inline_imports,
+        remove_type_checking=remove_type_checking,
+    )
 
 
 @app.command()
@@ -326,9 +381,22 @@ def diff(
     no_class_methods: NoClassMethodsOpt = False,
     section_only: SectionOnlyOpt = None,
     strategy_overrides: StrategyOverridesOpt = None,
+    hoist_inline_imports: HoistInlineImportsOpt = False,
+    remove_type_checking: RemoveTypeCheckingOpt = False,
 ) -> None:
     """Print unified diffs of the changes csort would make."""
-    _run(paths, "diff", config, exclude, no_recursive, no_class_methods, section_only, strategy_overrides)
+    _run(
+        paths,
+        "diff",
+        config,
+        exclude,
+        no_recursive,
+        no_class_methods,
+        section_only,
+        strategy_overrides,
+        hoist_inline_imports=hoist_inline_imports,
+        remove_type_checking=remove_type_checking,
+    )
 
 
 @config_app.command("init")
@@ -355,6 +423,8 @@ def config_show(config: ConfigOpt = None) -> None:
     typer.echo(f"class_methods.order = {cfg.class_methods_order}")
     typer.echo(f"class_methods.method_type_order = {cfg.class_methods_type_order}")
     typer.echo(f"classification.constants_pattern = {cfg.constants_pattern!r}")
+    typer.echo(f"transforms.hoist_inline_imports = {cfg.hoist_inline_imports}")
+    typer.echo(f"transforms.remove_type_checking = {cfg.remove_type_checking}")
 
 
 def main() -> None:

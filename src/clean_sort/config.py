@@ -54,6 +54,10 @@ class Config:
         unknown_section: Bucket name for unrecognised top-level nodes. Nodes in a
             bucket that is absent from ``sections`` are appended at the end,
             preserving their original relative order.
+        hoist_inline_imports: Move imports nested inside function/class bodies to
+            the top of the module (pre-pass before section sorting).
+        remove_type_checking: Delete ``if TYPE_CHECKING:`` guards and hoist the
+            imports they contained to the top of the module (pre-pass).
         config_path: Where the config was loaded from (``None`` = pure defaults).
     """
 
@@ -64,6 +68,8 @@ class Config:
     class_methods_type_order: list[str] = field(default_factory=lambda: ["instance", "class", "static"])
     constants_pattern: str = r"^[A-Z_][A-Z0-9_]*$"
     unknown_section: str = "other"
+    hoist_inline_imports: bool = False
+    remove_type_checking: bool = False
     config_path: Path | None = None
 
     def strategy(self, section: str) -> SectionStrategy:
@@ -106,6 +112,13 @@ class Config:
             pattern = classification["constants_pattern"]
             if isinstance(pattern, str):
                 cfg.constants_pattern = pattern
+
+        transforms = data.get("transforms", {}) or {}
+        if isinstance(transforms, dict):
+            if "hoist_inline_imports" in transforms:
+                cfg.hoist_inline_imports = bool(transforms["hoist_inline_imports"])
+            if "remove_type_checking" in transforms:
+                cfg.remove_type_checking = bool(transforms["remove_type_checking"])
 
         return cfg
 
