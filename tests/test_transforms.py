@@ -175,3 +175,66 @@ def test_hoist_preserves_compound_statements_in_body() -> None:
     assert "import json" in out.split("def f")[0]
     assert "for i in range(3)" in out
     assert "return json.loads" in out
+
+
+# --------------------------------------------------------- # noqa stripping
+def test_hoist_strips_noqa_from_hoisted_import() -> None:
+    # An inline import carrying a # noqa suppression loses it when hoisted.
+    src = "def f():\n    import json  # noqa: PLC0415\n    return json.loads('{}')\n"
+    out = sort(src, hoist_inline_imports=True)
+    assert "import json" in out.split("def f")[0]
+    assert "noqa" not in out
+
+
+def test_hoist_strips_bare_noqa_from_hoisted_import() -> None:
+    # Bare ``noqa`` (no codes) is stripped too.
+    src = "def f():\n    import json  # noqa\n    return 1\n"
+    out = sort(src, hoist_inline_imports=True)
+    assert "import json" in out.split("def f")[0]
+    assert "noqa" not in out
+
+
+def test_hoist_no_strip_no_trailing_whitespace() -> None:
+    # After stripping the noqa, no trailing whitespace is left on the line.
+    src = "def f():\n    import json  # noqa: PLC0415\n    return 1\n"
+    out = sort(src, hoist_inline_imports=True)
+    hoisted_line = out.splitlines()[0]
+    assert hoisted_line == "import json"
+
+
+def test_hoist_preserves_non_noqa_comment_on_hoisted_import() -> None:
+    # A non-noqa comment is preserved on the hoisted import.
+    src = "def f():\n    import json  # used for parsing\n    return json.loads('{}')\n"
+    out = sort(src, hoist_inline_imports=True)
+    assert "import json  # used for parsing" in out
+
+
+def test_remove_type_checking_strips_noqa_from_hoisted_import() -> None:
+    # An import inside a TYPE_CHECKING block carrying # noqa loses it.
+    src = "if TYPE_CHECKING:\n    import http.client  # noqa: F401\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "import http.client" in out
+    assert "noqa" not in out
+
+
+def test_remove_type_checking_strips_noqa_no_trailing_whitespace() -> None:
+    # No trailing whitespace left after stripping the noqa.
+    src = "if TYPE_CHECKING:\n    import http.client  # noqa: F401\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    for line in out.splitlines():
+        assert line.rstrip() == line or line == line.rstrip()
+
+
+def test_remove_type_checking_preserves_non_noqa_comment() -> None:
+    # A non-noqa comment on a TYPE_CHECKING import is preserved.
+    src = "if TYPE_CHECKING:\n    import http.client  # type-only dep\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "import http.client  # type-only dep" in out
+
+
+def test_noqa_strip_is_case_insensitive() -> None:
+    # ``NOQA`` (uppercase) is also stripped.
+    src = "def f():\n    import json  # NOQA\n    return 1\n"
+    out = sort(src, hoist_inline_imports=True)
+    assert "NOQA" not in out
+    assert "noqa" not in out

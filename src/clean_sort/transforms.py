@@ -18,10 +18,16 @@ Rationale (python-ultimate skill):
 Both transforms are **potentially breaking**: they change import timing. They
 are opt-in (``Config.hoist_inline_imports`` / ``Config.remove_type_checking``)
 and default to ``False``.
+
+Additionally, when an import is moved from its original context, any
+``# noqa`` linter-exclusion comment attached to it is automatically stripped
+— the suppression was only justified by the original location and would be
+misleading at module level.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 
 import libcst as cst
@@ -32,6 +38,10 @@ __all__ = [
     "apply_transforms",
 ]
 
+#: Comment pattern that marks a linter-exclusion directive. Matches bare
+#: ``noqa`` as well as scoped forms like ``noqa: E501`` or ``noqa: E501, F401``.
+_NOQA_RE = re.compile(r"#\s*noqa\b", re.IGNORECASE)
+
 
 class _ImportExtractor(cst.CSTVisitor):
     """Walk a function body and collect import statements in order.
@@ -41,7 +51,8 @@ class _ImportExtractor(cst.CSTVisitor):
     """
 
     def __init__(self) -> None:
-        self.found: list[cst.BaseSmallStatement] = []
+        #: ``(small_statement, original_line)`` pairs, in source order.
+        self.found: list[tuple[cst.BaseSmallStatement, cst.SimpleStatementLine]] = []
 
     def visit_FunctionDef(self, node: cst.FunctionDef) -> bool:  # noqa: N802, PLR6301
         return False  # don't descend into nested functions
@@ -52,7 +63,7 @@ class _ImportExtractor(cst.CSTVisitor):
     def visit_SimpleStatementLine(self, node: cst.SimpleStatementLine) -> None:  # noqa: N802, PLR6301
         for stmt in node.body:
             if _is_simple_import(stmt):
-                self.found.append(stmt)
+                self.found.append((stmt, node))
 
 
 # --------------------------------------------------------- inline import hoist
@@ -92,7 +103,7 @@ class InlineImportHoister(cst.CSTTransformer):
             return updated_node
 
         # Remove the hoisted lines from the function body.
-        hoisted_ids = {id(s) for s in extractor.found}
+        hoisted_ids = {id(stmt) for stmt, _ in extractor.found}
         new_body_items: list[cst.BaseStatement] = []
         for item in body_items:
             if isinstance(item, cst.SimpleStatementLine):
@@ -103,8 +114,19 @@ class InlineImportHoister(cst.CSTTransformer):
             else:
                 new_body_items.append(item)
 
-        for stmt in extractor.found:
-            self._hoisted.append(_flat_import_line(stmt))
+        for stmt, original_line in extractor.found:
+            # Rebuild as a clean top-level line, then carry over the original
+            # line's trailing comment — stripped of any ``noqa`` directive,
+            # since the suppression was only justified by the inline location.
+            flat = _flat_import_line(stmt)
+            comment = original_line.trailing_whitespace.comment
+            if comment is not None and _NOQA_RE.search(comment.value):
+                flat = _strip_noqa_from_line(flat)
+            elif comment is not None:
+                # Preserve non-noqa comments with the standard two-space gap.
+                new_trailing = flat.trailing_whitespace.with_changes(comment=comment, whitespace=cst.SimpleWhitespace("  "))
+                flat = flat.with_changes(trailing_whitespace=new_trailing)
+            self._hoisted.append(flat)
 
         return updated_node.with_changes(body=updated_node.body.with_changes(body=new_body_items))
 
@@ -141,7 +163,7 @@ class TypeCheckingRemover(cst.CSTTransformer):
             if isinstance(node, cst.If) and _is_type_checking_test(node.test):
                 extracted = _extract_imports_from_if(node)
                 if extracted is not None:
-                    self._hoisted.extend(extracted)
+                    self._hoisted.extend(_strip_noqa_from_line(line) for line in extracted)
                     removed = True
                     continue
             new_body.append(node)
@@ -167,6 +189,27 @@ def _is_simple_import(stmt: cst.BaseSmallStatement) -> bool:
 def _flat_import_line(stmt: cst.BaseSmallStatement) -> cst.SimpleStatementLine:
     """Wrap a small statement as a clean top-level statement line."""
     return cst.SimpleStatementLine(body=[stmt])
+
+
+def _strip_noqa_from_line(line: cst.SimpleStatementLine) -> cst.SimpleStatementLine:
+    """Strip a ``# noqa`` linter-exclusion comment from a statement line.
+
+    When an import is hoisted out of its original context (a function body or
+    a ``TYPE_CHECKING`` guard), any ``# noqa`` suppression that was justified
+    by *that* context no longer applies. This removes the trailing comment if
+    it is a noqa directive, leaving other comments untouched.
+
+    Only the line-level ``trailing_whitespace.comment`` is inspected — that is
+    where ``# noqa`` attaches for ``import``/``from`` statements.
+    """
+    trailing = line.trailing_whitespace
+    comment = trailing.comment
+    if comment is None or not _NOQA_RE.search(comment.value):
+        return line
+    # Drop the comment and the whitespace that preceded it (would otherwise
+    # leave trailing spaces before the newline).
+    new_trailing = trailing.with_changes(comment=None, whitespace=cst.SimpleWhitespace(""))
+    return line.with_changes(trailing_whitespace=new_trailing)
 
 
 def _is_type_checking_test(test: cst.BaseExpression) -> bool:
