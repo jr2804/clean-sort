@@ -50,28 +50,53 @@ def dependency(nodes: list[cst.CSTNode], direction: str) -> list[cst.CSTNode]:
         for j in out_edges[i]:
             indegree[j] += 1
 
-    heap = [i for i in range(count) if indegree[i] == 0]
-    heapq.heapify(heap)
-    order: list[int] = []
-    visited: set[int] = set()
-    while heap:
-        i = heapq.heappop(heap)
-        if i in visited:
-            continue
-        visited.add(i)
-        order.append(i)
-        for j in out_edges[i]:
-            indegree[j] -= 1
-            if indegree[j] == 0:
-                heapq.heappush(heap, j)
-
-    # cyclic leftovers: keep original order
-    for i in range(count):
-        if i not in visited:
+    if direction == "abstraction":
+        # For abstraction we reverse at the end, so tie-breaking among
+        # same-level nodes must use the *reverse* of their original index to
+        # keep the output stable (idempotent).  We achieve this by negating
+        # indices in the heap.
+        heap = [-i for i in range(count) if indegree[i] == 0]
+        heapq.heapify(heap)
+        order: list[int] = []
+        visited: set[int] = set()
+        while heap:
+            i = -heapq.heappop(heap)
+            if i in visited:
+                continue
             visited.add(i)
             order.append(i)
+            for j in out_edges[i]:
+                indegree[j] -= 1
+                if indegree[j] == 0:
+                    heapq.heappush(heap, -j)
 
-    if direction == "abstraction":
+        # cyclic leftovers: keep original order
+        for i in range(count):
+            if i not in visited:
+                visited.add(i)
+                order.append(i)
+
         order.reverse()
+    else:
+        heap = [i for i in range(count) if indegree[i] == 0]
+        heapq.heapify(heap)
+        order = []
+        visited = set()
+        while heap:
+            i = heapq.heappop(heap)
+            if i in visited:
+                continue
+            visited.add(i)
+            order.append(i)
+            for j in out_edges[i]:
+                indegree[j] -= 1
+                if indegree[j] == 0:
+                    heapq.heappush(heap, j)
+
+        # cyclic leftovers: keep original order
+        for i in range(count):
+            if i not in visited:
+                visited.add(i)
+                order.append(i)
 
     return [nodes[i] for i in order]
