@@ -4,7 +4,7 @@ title: Section layout
 
 ## Section layout
 
-`csort` classifies every top-level statement into a *section*, then emits
+`csort` classifies every top-level statement into a _section_, then emits
 sections in a fixed order. Within a section, statements are ordered by the
 section's [strategy](sorting-modes.md). The result is a predictable,
 readable module shape: imports first, constants before classes, helpers near
@@ -87,7 +87,7 @@ Two things are never reordered, even if they appear out of place:
 
 Statements `csort` does not recognise — runtime setup such as
 `app = typer.Typer()` or a module-level `setup()` call — become **barriers**.
-Recognised statements only reorder *within* the contiguous run between barriers,
+Recognised statements only reorder _within_ the contiguous run between barriers,
 so `csort` never moves code across a statement it might depend on.
 
 Before (a barrier splits the functions):
@@ -123,3 +123,18 @@ def helper():
 
 Use barriers (or a `# csort: off` directive) whenever a top-level statement has
 order-dependent side effects.
+
+### Realistic examples
+
+Five fully-formed sample modules live in `tests/data/`, each with an unsorted
+input and committed sorted output. They demonstrate the section layout,
+barriers, and strategies on real-world Python patterns:
+
+```shell
+csort diff tests/data/web_service_unsorted.py     # stepdown + undersort
+csort diff tests/data/cli_app_unsorted.py          # the Typer barrier pattern
+csort diff tests/data/inventory_models_unsorted.py # alpha + rich undersort
+```
+
+See [Sorting modes](sorting-modes.md) for the full table of what each sample
+demonstrates.

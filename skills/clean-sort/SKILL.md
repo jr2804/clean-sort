@@ -112,3 +112,19 @@ sorted_text = sort_source(source_text, cfg)
 See `scripts/sort_programmatically.py` for a runnable example,
 `references/` for the full config/classification reference, and `assets/` for a
 sample file and config template.
+
+Five realistic, fully-formed example modules (each with unsorted input and
+committed sorted output) live in `tests/data/` and demonstrate every strategy:
+
+| Sample             | Strategy      | What it shows                                           |
+| ------------------ | ------------- | ------------------------------------------------------- |
+| `web_service`      | `stepdown`    | enums, dataclasses, retry client, undersort on a class  |
+| `csv_pipeline`     | `stepdown`    | runtime barriers (validator registry), `TYPE_CHECKING`  |
+| `cli_app`          | `keep`        | the `app = typer.Typer()` barrier pattern               |
+| `plugin_registry`  | `abstraction` | callee-first ordering in a plugin/middleware system     |
+| `inventory_models` | `alpha`       | alpha on enums + functions, rich undersort in one class |
+
+```shell
+csort diff tests/data/plugin_registry_unsorted.py
+csort diff tests/data/inventory_models_unsorted.py
+```
