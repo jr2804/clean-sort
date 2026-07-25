@@ -1,6 +1,6 @@
 # Auto-tag and release every push to main.
 #
-# Creates a calendar version tag (YYYY.M.D / YYYY.M.D.N) and publishes
+# Creates a calendar version tag (YYYY.M.N) and publishes
 # a Forgejo release with the built wheel + sdist + LLM-generated release notes.
 #
 # Prerequisites:
@@ -42,28 +42,25 @@ jobs:
           fetch-depth: 0
 
       # --- Compute next calver version ---
-      #   First push today  ->  YYYY.M.D
-      #   Subsequent pushes ->  YYYY.M.D.N  (N = 1, 2, 3...)
+      #   3 components:  YYYY.M.N
+      #   N is a monthly increment (0, 1, 2, ...), resetting each month.
       - name: Compute next version
         id: version
         run: |
-          today=$(date +%Y.%-m.%-d)
+          base=$(date +%Y.%-m)
 
-          max_suffix=$(
-            git tag -l "${today}.*" \
-              | sed "s/^${today}\.//" \
+          max_n=$(
+            git tag -l "${base}.*" \
+              | sed "s/^${base}\.//" \
+              | grep -E '^[0-9]+$' \
               | sort -n \
               | tail -1
           )
 
-          if [ -z "$max_suffix" ]; then
-            if git tag -l "${today}" | grep -q .; then
-              echo "version=${today}.1" >> "$GITHUB_OUTPUT"
-            else
-              echo "version=${today}" >> "$GITHUB_OUTPUT"
-            fi
+          if [ -z "$max_n" ]; then
+            echo "version=${base}.0" >> "$GITHUB_OUTPUT"
           else
-            echo "version=${today}.$((max_suffix + 1))" >> "$GITHUB_OUTPUT"
+            echo "version=${base}.$((max_n + 1))" >> "$GITHUB_OUTPUT"
           fi
 
           echo "Computed: $(grep ^version= "$GITHUB_OUTPUT" | cut -d= -f2)"
