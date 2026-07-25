@@ -84,6 +84,9 @@ Default section order:
 
 When the user requests a durable behavior change, record it here or in the relevant child AGENTS.md.
 
+- **AGENTS.md is the only agent-instruction standard.** Do not create `CLAUDE.md` or other per-tool duplicates.
+- All agent guidance lives in the DOX hierarchy: root `AGENTS.md`, `.agents/` files, and subtree `AGENTS.md` files.
+
 ### Child DOX Index
 
 - `src/clean_sort/` — primary package: AST-based module reorganization (`src/clean_sort/AGENTS.md`)
