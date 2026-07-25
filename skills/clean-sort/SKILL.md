@@ -8,7 +8,7 @@ description: clean-sort (`csort`) is an AST/CST-based structural sorter for Pyth
 `csort` reorders the **top-level statements** of a Python module into a
 configurable section order and the **methods within each class** by visibility
 and type. It is built on `libcst`, so comments and formatting are preserved. It
-is a *structural* sorter — it complements `ruff`/`isort` (imports) and `black`
+is a _structural_ sorter — it complements `ruff`/`isort` (imports) and `black`
 (formatting), it does not replace them.
 
 ## Install
@@ -16,9 +16,6 @@ is a *structural* sorter — it complements `ruff`/`isort` (imports) and `black`
 ```shell
 uv tool install clean-sort                 # or: git+https://codeberg.org/jr2804/clean-sort
 csort --version
-# optional extras:
-uv tool install "clean-sort[isort]"        # isort engine for import sorting
-uv tool install "clean-sort[ruff]"         # bundled ruff (enables `csort ruff ...`)
 ```
 
 ## When to use
@@ -33,7 +30,7 @@ uv tool install "clean-sort[ruff]"         # bundled ruff (enables `csort ruff .
 
 Do **not** use csort for import-only sorting (use `ruff`/`isort`) or for
 formatting (use `ruff format`/`black`). csort composes with both — run it
-*after* formatters.
+_after_ formatters.
 
 ## CLI
 
@@ -43,12 +40,11 @@ csort check [PATHS...]          # exit 1 if any file would change (CI / pre-comm
 csort diff [PATHS...]           # print unified diffs
 csort config init               # write a csort.toml template
 csort config show               # print resolved config
-csort ruff [ARGS...]            # proxy to bundled/installed ruff
 csort --version
 ```
 
 Common options: `--config PATH`, `--exclude/-x GLOB`, `--no-recursive`,
-`--no-class-methods`, `--no-imports`.
+`--no-class-methods`, `--section-only SECTIONS`, `--strategy-overrides OVERRIDES`.
 
 ```shell
 # editor / pre-commit friendly:
@@ -74,19 +70,16 @@ functions = "stepdown"   # or "alpha" | "abstraction" | "keep"
 enabled = true
 order = ["public", "protected", "private"]
 method_type_order = ["instance", "class", "static"]
-
-[imports]
-engine = "none"          # "none" | "isort" | "ruff"
 ```
 
 ### Strategies
 
-| value         | meaning                                                            | safe for            |
-|---------------|-------------------------------------------------------------------|---------------------|
-| `keep`        | preserve original order (default)                                 | everything          |
-| `alpha`       | alphabetical by primary name                                      | imports, enums      |
-| `stepdown`    | caller before callee (top-down narrative)                         | functions, classes  |
-| `abstraction` | callee before caller (low-level utilities first)                  | functions, classes  |
+| value         | meaning                                          | safe for           |
+| ------------- | ------------------------------------------------ | ------------------ |
+| `keep`        | preserve original order (default)                | everything         |
+| `alpha`       | alphabetical by primary name                     | imports, enums     |
+| `stepdown`    | caller before callee (top-down narrative)        | functions, classes |
+| `abstraction` | callee before caller (low-level utilities first) | functions, classes |
 
 > **Caution:** `alpha` on `module_constants`/`classes`/`dataclasses` can break
 > runtime order (constants that reference each other; inheritance). Always
@@ -98,7 +91,7 @@ csort is conservative:
 
 - **Barriers:** statements that don't map to a configured section (e.g.
   `app = typer.Typer()`, runtime setup) are never moved. Recognised statements
-  only reorder *within* their contiguous barrier-free run, so csort never moves
+  only reorder _within_ their contiguous barrier-free run, so csort never moves
   code across a statement it might depend on.
 - **Pinned:** the module docstring and `from __future__ import ...` always stay
   first.

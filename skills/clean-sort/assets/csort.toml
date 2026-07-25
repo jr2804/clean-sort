@@ -23,6 +23,3 @@ enums = "alpha"
 enabled = true
 order = ["public", "protected", "private"]
 method_type_order = ["instance", "class", "static"]
-
-[imports]
-engine = "none"   # none | isort | ruff
