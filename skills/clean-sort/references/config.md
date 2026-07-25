@@ -95,6 +95,8 @@ Behaviour:
 - Imports inside nested functions, `if`/`try`/`with` blocks, or class bodies
   are left in place.
 - Duplicate imports from multiple functions are deduplicated.
+- `# noqa` linter-exclusion comments on hoisted imports are automatically
+  stripped — the suppression was only justified by the inline location.
 
 ### `remove_type_checking` (default `false`)
 
@@ -115,3 +117,5 @@ Behaviour:
   untouched for safety.
 - `from typing import TYPE_CHECKING` is removed if unused after dissolution;
   other names imported from the same line are preserved.
+- `# noqa` linter-exclusion comments on dissolved imports are automatically
+  stripped — the suppression was only justified by the TYPE_CHECKING guard.
