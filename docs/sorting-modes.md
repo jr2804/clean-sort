@@ -4,16 +4,16 @@ title: Sorting modes
 
 ## Sorting modes
 
-Each section is ordered by a *strategy*. Set it per section under
+Each section is ordered by a _strategy_. Set it per section under
 `[tool.csort.strategy]`, or override on the fly with
 `--strategy-overrides`. Four strategies exist:
 
-| Value         | Meaning                                           | Applies to                    |
-| ------------- | ------------------------------------------------- | ----------------------------- |
-| `keep`        | Preserve original order (default)                 | any section                   |
-| `alpha`       | Stable alphabetical by primary name              | imports, enums, constants     |
-| `stepdown`    | Caller before callee (top-down narrative)         | functions, classes            |
-| `abstraction` | Callee before caller (low-level utilities first)  | functions, classes            |
+| Value         | Meaning                                          | Applies to                |
+| ------------- | ------------------------------------------------ | ------------------------- |
+| `keep`        | Preserve original order (default)                | any section               |
+| `alpha`       | Stable alphabetical by primary name              | imports, enums, constants |
+| `stepdown`    | Caller before callee (top-down narrative)        | functions, classes        |
+| `abstraction` | Callee before caller (low-level utilities first) | functions, classes        |
 
 `stepdown` / `abstraction` only make sense for functions and classes; applied
 to other sections they fall back to `alpha`. Cycles keep their original relative
@@ -56,7 +56,7 @@ def zebra():
 
 ### `stepdown` — caller before callee
 
-The *Clean Code* step-down rule: a caller appears **above** the functions it
+The _Clean Code_ step-down rule: a caller appears **above** the functions it
 calls, giving a top-down reading order.
 
 ```python
@@ -104,15 +104,15 @@ def main():          # orchestrator last
 
 #### `stepdown` vs `abstraction` at a glance
 
-|                      | `stepdown`            | `abstraction`          |
-| -------------------- | --------------------- | ---------------------- |
-| Reading direction    | top-down narrative    | bottom-up construction  |
-| Where callers sit    | above their callees   | below their callees    |
-| Good for             | onboarding a reader   | exposing primitives     |
+|                   | `stepdown`          | `abstraction`          |
+| ----------------- | ------------------- | ---------------------- |
+| Reading direction | top-down narrative  | bottom-up construction |
+| Where callers sit | above their callees | below their callees    |
+| Good for          | onboarding a reader | exposing primitives    |
 
 ### In-class method ordering (undersort)
 
-Independent of the section strategy, `csort` reorders methods *within* each
+Independent of the section strategy, `csort` reorders methods _within_ each
 class using undersort semantics — grouped by visibility then method type,
 stable within each group:
 
@@ -148,8 +148,34 @@ class out.
 
 ### Trying it out safely
 
+Always preview changes before writing them. `csort diff` shows a unified diff
+without touching the file, and `csort check` (exit-code based) is ideal for CI
+or pre-commit hooks:
+
 ```shell
 csort diff src/                            # preview every change
 csort run src/ --strategy-overrides functions=stepdown
 csort check src/                           # exit 1 if anything would change
+```
+
+### Realistic examples
+
+The repository ships with five fully-formed sample modules in `tests/data/`
+that demonstrate every strategy and feature on believable Python code — not
+toy snippets. Each has an `*_unsorted.py` input and its committed
+`*_sorted.py` output:
+
+| Sample                                  | Strategy shown              | Highlights                                                               |
+| --------------------------------------- | --------------------------- | ------------------------------------------------------------------------ |
+| `web_service_{unsorted,sorted}.py`      | `stepdown`                  | dataclasses, enums, retry loop, undersort on `Client`                    |
+| `csv_pipeline_{unsorted,sorted}.py`     | `stepdown`                  | runtime barriers (`_VALIDATORS` + `register_validator`), `TYPE_CHECKING` |
+| `cli_app_{unsorted,sorted}.py`          | `keep` (default)            | the classic `app = typer.Typer()` barrier keeping commands together      |
+| `plugin_registry_{unsorted,sorted}.py`  | `abstraction`               | callee-first ordering: leaf utilities before the orchestrator            |
+| `inventory_models_{unsorted,sorted}.py` | `alpha` (enums + functions) | rich undersort: all visibility/type combinations in one class            |
+
+Try them:
+
+```shell
+csort diff tests/data/plugin_registry_unsorted.py
+csort run tests/data/inventory_models_unsorted.py --strategy-overrides enums=alpha,functions=alpha
 ```
