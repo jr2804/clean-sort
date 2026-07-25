@@ -110,11 +110,6 @@ enabled = true
 order = ["public", "protected", "private"]
 method_type_order = ["instance", "class", "static"]
 
-[tool.csort.imports]
-# Import-block engine: "none" (default, only structural grouping) | "isort" | "ruff".
-# "isort" uses isort's in-memory API (install clean-sort[isort]).
-engine = "none"
-
 # Back-compat: csort also reads [tool.undersort] for class_methods order/method_type_order
 # when [tool.csort.class_methods] is absent.
 [tool.undersort]
