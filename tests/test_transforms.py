@@ -238,3 +238,205 @@ def test_noqa_strip_is_case_insensitive() -> None:
     out = sort(src, hoist_inline_imports=True)
     assert "NOQA" not in out
     assert "noqa" not in out
+
+
+# ------------------------------------------------------------ nested depth (any depth)
+def test_remove_type_checking_nested_in_class() -> None:
+    src = "class C:\n    if TYPE_CHECKING:\n        import http.client\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "import http.client" in out
+
+
+def test_remove_type_checking_nested_in_class_with_typing_import() -> None:
+    src = "from typing import TYPE_CHECKING\n\nclass C:\n    if TYPE_CHECKING:\n        import http.client\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "import http.client" in out
+
+
+def test_remove_type_checking_nested_in_function() -> None:
+    src = "def f():\n    if TYPE_CHECKING:\n        import os\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "import os" in out
+
+
+def test_remove_type_checking_nested_in_try() -> None:
+    src = "def f():\n    try:\n        if TYPE_CHECKING:\n            import os\n    except:\n        pass\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "import os" in out
+
+
+def test_remove_type_checking_nested_in_if() -> None:
+    src = "if True:\n    if TYPE_CHECKING:\n        import os\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "import os" in out
+
+
+def test_remove_type_checking_nested_in_with() -> None:
+    src = "def f():\n    with open('/dev/null'):\n        if TYPE_CHECKING:\n            import os\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "import os" in out
+
+
+def test_remove_type_checking_nested_in_for() -> None:
+    src = "def f():\n    for i in range(3):\n        if TYPE_CHECKING:\n            import os\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "import os" in out
+
+
+def test_remove_type_checking_nested_in_while() -> None:
+    src = "def f():\n    while False:\n        if TYPE_CHECKING:\n            import os\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "import os" in out
+
+
+def test_remove_type_checking_nested_in_except_handler() -> None:
+    src = "def f():\n    try:\n        pass\n    except:\n        if TYPE_CHECKING:\n            import os\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "import os" in out
+
+
+def test_remove_type_checking_nested_in_finally() -> None:
+    src = "def f():\n    try:\n        pass\n    finally:\n        if TYPE_CHECKING:\n            import os\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "import os" in out
+
+
+def test_remove_type_checking_nested_in_orelse() -> None:
+    src = "def f():\n    try:\n        pass\n    except:\n        pass\n    else:\n        if TYPE_CHECKING:\n            import os\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "import os" in out
+
+
+def test_remove_type_checking_nested_deeply() -> None:
+    src = (
+        "class C:\n"
+        "    def f(self):\n"
+        "        try:\n"
+        "            with open('/dev/null'):\n"
+        "                if TYPE_CHECKING:\n"
+        "                    import http.client\n"
+        "        except:\n"
+        "            pass\n"
+    )
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "import http.client" in out
+
+
+def test_remove_type_checking_nested_idempotent() -> None:
+    src = "from typing import TYPE_CHECKING\n\nclass C:\n    def f(self):\n        if TYPE_CHECKING:\n            import os\n\nx = 1\n"
+    once = sort(src, remove_type_checking=True)
+    assert sort(once, remove_type_checking=True) == once
+
+
+def test_remove_type_checking_nested_preserves_non_import_block() -> None:
+    # Non-import code inside a nested TYPE_CHECKING guard -> leave untouched.
+    src = "def f():\n    if TYPE_CHECKING:\n        import os\n        x = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" in out  # still there
+    assert "import os" in out
+
+
+def test_remove_type_checking_nested_attribute_form() -> None:
+    src = "import typing\n\nclass C:\n    if typing.TYPE_CHECKING:\n        import http.client\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "import http.client" in out
+    assert "TYPE_CHECKING" not in out
+
+
+# ---------------------------------------------------- inline hoist at depth
+def test_hoist_nested_in_try_block() -> None:
+    src = "def f():\n    try:\n        import json\n        return json.loads('{}')\n    except:\n        pass\n"
+    out = sort(src, hoist_inline_imports=True)
+    assert "import json" in out.split("def f")[0]
+    assert "import json" not in out.split("def f")[1]
+
+
+def test_hoist_nested_in_if_block() -> None:
+    src = "def f():\n    if True:\n        import json\n        return json.loads('{}')\n"
+    out = sort(src, hoist_inline_imports=True)
+    assert "import json" in out.split("def f")[0]
+    assert "import json" not in out.split("def f")[1]
+
+
+def test_hoist_nested_in_with_block() -> None:
+    src = "def f():\n    with open('/dev/null'):\n        import os\n        return 42\n"
+    out = sort(src, hoist_inline_imports=True)
+    assert "import os" in out.split("def f")[0]
+
+
+def test_hoist_nested_in_for_loop() -> None:
+    src = "def f():\n    for i in range(3):\n        import os\n        return 42\n"
+    out = sort(src, hoist_inline_imports=True)
+    assert "import os" in out.split("def f")[0]
+
+
+def test_hoist_nested_in_while_loop() -> None:
+    src = "def f():\n    while False:\n        import os\n        return 42\n"
+    out = sort(src, hoist_inline_imports=True)
+    assert "import os" in out.split("def f")[0]
+
+
+def test_hoist_nested_in_except_handler() -> None:
+    src = "def f():\n    try:\n        pass\n    except:\n        import json\n        return json.loads('{}')\n"
+    out = sort(src, hoist_inline_imports=True)
+    assert "import json" in out.split("def f")[0]
+
+
+def test_hoist_nested_in_finally() -> None:
+    src = "def f():\n    try:\n        pass\n    finally:\n        import json\n        return json.loads('{}')\n"
+    out = sort(src, hoist_inline_imports=True)
+    assert "import json" in out.split("def f")[0]
+
+
+def test_hoist_nested_in_orelse() -> None:
+    src = "def f():\n    try:\n        pass\n    except:\n        pass\n    else:\n        import json\n        return json.loads('{}')\n"
+    out = sort(src, hoist_inline_imports=True)
+    assert "import json" in out.split("def f")[0]
+
+
+def test_hoist_nested_deeply() -> None:
+    src = (
+        "def f():\n"
+        "    try:\n"
+        "        if True:\n"
+        "            with open('/dev/null'):\n"
+        "                import json\n"
+        "                return json.loads('{}')\n"
+        "    except:\n"
+        "        pass\n"
+    )
+    out = sort(src, hoist_inline_imports=True)
+    assert "import json" in out.split("def f")[0]
+    assert "import json" not in out.split("def f")[1]
+
+
+def test_hoist_nested_idempotent() -> None:
+    src = "def f():\n    try:\n        import json\n        return json.loads('{}')\n    except:\n        pass\n"
+    once = sort(src, hoist_inline_imports=True)
+    assert sort(once, hoist_inline_imports=True) == once
+
+
+def test_hoist_nested_preserves_other_statements() -> None:
+    src = "def f():\n    try:\n        import json\n        x = 1\n        return json.loads('{}')\n    except:\n        pass\n"
+    out = sort(src, hoist_inline_imports=True)
+    assert "import json" in out.split("def f")[0]
+    assert "x = 1" in out
+    assert "return json" in out
+
+
+def test_hoist_nested_does_not_descend_into_nested_function() -> None:
+    src = "def outer():\n    try:\n        def inner():\n            import json\n            return 1\n        return inner()\n    except:\n        pass\n"
+    out = sort(src, hoist_inline_imports=True)
+    assert "import json" in out.split("def inner")[1]  # stays inside inner
