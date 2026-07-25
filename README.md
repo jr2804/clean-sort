@@ -12,7 +12,9 @@ and reorders the methods inside each class by visibility and type. It is built
 on [`libcst`](https://github.com/Instagram/LibCST), so comments and formatting
 are preserved.
 
-It is a **module reorganizer**: it focuses on grouping and ordering imports/globals/constants/classes/methods/etc. It does not integrate with other sorting tools (isort, undersort, etc.) or provide ruff subcommands.
+It is a **module reorganizer**: it focuses on grouping and ordering
+imports/globals/constants/classes/methods/etc. It does not integrate with
+other sorting tools (isort, undersort, etc.) or provide ruff subcommands.
 
 ## Install
 
@@ -102,12 +104,12 @@ method_type_order = ["instance", "class", "static"]
 
 ### Strategies
 
-| value         | meaning                                            | applies to            |
-|---------------|----------------------------------------------------|-----------------------|
-| `keep`        | preserve original order (default)                  | any section           |
-| `alpha`       | alphabetical by primary name                       | imports, enums        |
-| `stepdown`    | caller before callee (top-down narrative)          | functions, classes    |
-| `abstraction` | callee before caller (low-level utilities first)   | functions, classes    |
+| value         | meaning                                          | applies to         |
+| ------------- | ------------------------------------------------ | ------------------ |
+| `keep`        | preserve original order (default)                | any section        |
+| `alpha`       | alphabetical by primary name                     | imports, enums     |
+| `stepdown`    | caller before callee (top-down narrative)        | functions, classes |
+| `abstraction` | callee before caller (low-level utilities first) | functions, classes |
 
 > **Caution:** `alpha` on `module_constants` / `classes` / `dataclasses` can
 > break runtime order (interdependent constants, inheritance). Always preview
@@ -119,7 +121,7 @@ method_type_order = ["instance", "class", "static"]
 
 - **Barriers** — statements that don't map to a configured section (runtime
   setup like `app = typer.Typer()`) are never moved. Recognised statements only
-  reorder *within* their contiguous barrier-free run, so csort never moves code
+  reorder _within_ their contiguous barrier-free run, so csort never moves code
   across a statement it might depend on.
 - **Pinned** — the module docstring and `from __future__ import ...` always stay
   first.

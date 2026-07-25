@@ -54,7 +54,8 @@ ignore = [
     "ANN204",  # dynamically typed typed expressions
     "ANN401",
     "PLR0912",  # too-many-branches
-    "PLR0913",
+    "PLR0913",  # too-many-arguments
+    "PLR0917",  # too-many-positional-arguments (CLI commands take many options)
     "PLR2004", # magic value used in comparison
     "PT028",   # test function parameter has default argument
 ]
