@@ -110,7 +110,7 @@ def _is_constant_assignment(node: cst.SimpleStatementLine, cfg) -> bool:  # noqa
                 if isinstance(target.target, cst.Name):
                     name = target.target.value
                     break
-        elif isinstance(stmt.target, cst.Name):
+        elif isinstance(stmt, cst.AnnAssign) and isinstance(stmt.target, cst.Name):
             name = stmt.target.value
         if name is None or not (pattern.match(name) or dunder.match(name)):
             return False
@@ -173,8 +173,8 @@ def referenced_names(node: cst.CSTNode) -> set[str]:
     names: set[str] = set()
 
     class _Collector(cst.CSTVisitor):
-        def visit_Name(self, n: cst.Name) -> None:  # noqa: N802, PLR6301
-            names.add(n.value)
+        def visit_Name(self, node: cst.Name) -> None:  # noqa: N802, PLR6301
+            names.add(node.value)
 
     node.visit(_Collector())
     return names

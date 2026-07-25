@@ -80,7 +80,7 @@ class Config:
         if isinstance(module, dict) and "sections" in module:
             sections = module["sections"]
             if isinstance(sections, list) and all(isinstance(s, str) for s in sections):
-                cfg.sections = list(sections)
+                cfg.sections = [s for s in sections if isinstance(s, str)]
 
         strategy = data.get("strategy", {}) or {}
         if isinstance(strategy, dict):
@@ -88,7 +88,7 @@ class Config:
                 if not isinstance(name, str):
                     continue
                 if value in VALID_STRATEGIES:
-                    cfg.strategies[name] = value  # type: ignore[assignment]
+                    cfg.strategies[name] = value
                 else:
                     warnings.warn(
                         f"csort: unknown strategy {value!r} for section {name!r}; ignoring",
