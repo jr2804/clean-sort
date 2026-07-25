@@ -16,30 +16,28 @@ directory):
 
 ## Schema
 
-| table                  | key                     | type / values                                            |
-|------------------------|-------------------------|----------------------------------------------------------|
-| `module`               | `sections`              | list of section names (ordered)                          |
-| `strategy`             | `<section>`             | `keep` \| `alpha` \| `stepdown` \| `abstraction`        |
-| `class_methods`        | `enabled`               | bool                                                     |
-| `class_methods`        | `order`                 | permutation of `public, protected, private`             |
-| `class_methods`        | `method_type_order`     | permutation of `instance, class, static`                 |
-| `imports`              | `engine`                | `none` \| `isort` \| `ruff`                              |
-| `imports`              | `extra_args`            | list of strings (forwarded to isort)                     |
-| `classification`       | `constants_pattern`     | regex (default `^[A-Z_][A-Z0-9_]*$`)                     |
+| table            | key                 | type / values                                    |
+| ---------------- | ------------------- | ------------------------------------------------ |
+| `module`         | `sections`          | list of section names (ordered)                  |
+| `strategy`       | `<section>`         | `keep` \| `alpha` \| `stepdown` \| `abstraction` |
+| `class_methods`  | `enabled`           | bool                                             |
+| `class_methods`  | `order`             | permutation of `public, protected, private`      |
+| `class_methods`  | `method_type_order` | permutation of `instance, class, static`         |
+| `classification` | `constants_pattern` | regex (default `^[A-Z_][A-Z0-9_]*$`)             |
 
 ## Section classification (top-level statements)
 
-| section            | matches                                                          |
-|--------------------|------------------------------------------------------------------|
-| `imports`          | `import`, `from ... import` (except `from __future__`)           |
-| `typing_imports`   | `if TYPE_CHECKING:` block                                        |
-| `module_constants` | assignments to `ALL_CAPS` or dunder (`__all__`, `__version__`)  |
-| `enums`            | classes whose base ends in `Enum`/`Flag`                         |
-| `dataclasses`      | classes decorated `@dataclass`                                   |
-| `classes`          | other `class` definitions                                        |
-| `functions`        | top-level `def`                                                  |
-| `main_block`       | `if __name__ == "__main__":`                                     |
-| `other` (barrier)  | anything else — **never moved**                                  |
+| section            | matches                                                        |
+| ------------------ | -------------------------------------------------------------- |
+| `imports`          | `import`, `from ... import` (except `from __future__`)         |
+| `typing_imports`   | `if TYPE_CHECKING:` block                                      |
+| `module_constants` | assignments to `ALL_CAPS` or dunder (`__all__`, `__version__`) |
+| `enums`            | classes whose base ends in `Enum`/`Flag`                       |
+| `dataclasses`      | classes decorated `@dataclass`                                 |
+| `classes`          | other `class` definitions                                      |
+| `functions`        | top-level `def`                                                |
+| `main_block`       | `if __name__ == "__main__":`                                   |
+| `other` (barrier)  | anything else — **never moved**                                |
 
 A statement whose section is not listed in `module.sections` is also treated as
 a barrier (kept in place).
