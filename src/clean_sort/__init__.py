@@ -11,11 +11,12 @@ from __future__ import annotations
 
 import importlib.metadata
 
-from .config import Config, discover
+from .config import VALID_STRATEGIES, Config, discover
 from .config import load as load_config
 from .pipeline import SectionSorter, sort_source, would_change
 
 __all__ = [
+    "VALID_STRATEGIES",
     "Config",
     "SectionSorter",
     "__version__",

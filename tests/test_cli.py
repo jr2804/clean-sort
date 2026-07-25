@@ -75,3 +75,60 @@ def test_config_show(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     res = runner.invoke(app, ["config", "show"])
     assert res.exit_code == 0
     assert "imports" in res.output
+
+
+def test_section_only_restricts_reordering(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    # Clean cwd; functions use alpha so the restricted section still reorders.
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text('[strategy]\nfunctions = "alpha"\n', encoding="utf-8")
+    # imports sit after the functions; without --section-only csort hoists them
+    # to the top. With --section-only functions, imports become a barrier and stay.
+    src = "def b():\n    pass\ndef a():\n    pass\nimport os\n"
+    res = runner.invoke(app, ["run", "-", "--section-only", "functions"], input=src)
+    assert res.exit_code == 0
+    assert res.output.index("def a") < res.output.index("def b")
+    assert res.output.index("import os") > res.output.index("def b")
+
+
+def test_strategy_overrides_changes_strategy(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    # base config keeps function order; the override flips functions to alpha.
+    (tmp_path / "csort.toml").write_text('[strategy]\nfunctions = "keep"\n', encoding="utf-8")
+    src = "def b():\n    pass\ndef a():\n    pass\n"
+    res = runner.invoke(app, ["run", "-", "--strategy-overrides", "functions=alpha"], input=src)
+    assert res.exit_code == 0
+    assert res.output.index("def a") < res.output.index("def b")
+
+
+def test_strategy_overrides_invalid_is_ignored(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text('[strategy]\nfunctions = "keep"\n', encoding="utf-8")
+    src = "def b():\n    pass\ndef a():\n    pass\n"
+    # unknown strategy value is warned and ignored, so the base "keep" wins.
+    res = runner.invoke(app, ["run", "-", "--strategy-overrides", "functions=bogus"], input=src)
+    assert res.exit_code == 0
+    assert res.output.index("def b") < res.output.index("def a")
+
+
+def test_section_only_multiple_sections(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text('[strategy]\nfunctions = "alpha"\nimports = "alpha"\n', encoding="utf-8")
+    src = "def b():\n    pass\ndef a():\n    pass\nimport zeta\nimport alpha\n"
+    res = runner.invoke(app, ["run", "-", "--section-only", "imports,functions"], input=src)
+    assert res.exit_code == 0
+    assert res.output.index("import alpha") < res.output.index("import zeta")
+    assert res.output.index("def a") < res.output.index("def b")
+
+
+def test_strategy_overrides_multiple_sections(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text('[strategy]\nfunctions = "keep"\n', encoding="utf-8")
+    src = "def b():\n    pass\ndef a():\n    pass\nimport zeta\nimport alpha\n"
+    res = runner.invoke(
+        app,
+        ["run", "-", "--strategy-overrides", "functions=alpha,imports=alpha"],
+        input=src,
+    )
+    assert res.exit_code == 0
+    assert res.output.index("import alpha") < res.output.index("import zeta")
+    assert res.output.index("def a") < res.output.index("def b")

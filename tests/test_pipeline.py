@@ -165,3 +165,46 @@ def test_would_change() -> None:
 def test_empty_and_single_statement_unchanged() -> None:
     assert sort_source("", KEEP) == ""
     assert sort_source("import os\n", KEEP) == "import os\n"
+
+
+# --------------------------------------------- section restriction (--section-only)
+def test_restricted_sections_reorder_only_those() -> None:
+    # `sections=["functions"]` means only the functions bucket may move; an
+    # import is excluded from reordering and stays put as a barrier.
+    src = "def b():\n    pass\ndef a():\n    pass\nimport os\n"
+    cfg = Config(sections=["functions"], strategies={"functions": "alpha"})
+    out = sort_source(src, cfg)
+    assert out.index("def a") < out.index("def b")
+    assert out.index("import os") > out.index("def b")
+
+
+def test_restricted_sections_keep_order_of_excluded() -> None:
+    # With `functions` excluded, they keep their original order while the
+    # allowed bucket (imports) still hoists to the top.
+    src = "def b():\n    pass\ndef a():\n    pass\nimport os\n"
+    out = sort_source(src, Config(sections=["imports"]))
+    assert out.index("def b") < out.index("def a")
+    assert out.index("import os") > out.index("def a")
+
+
+def test_restricted_sections_multi_reorder_independently() -> None:
+    # Each allowed bucket reorders within itself (imports alpha, functions alpha).
+    src = "def b():\n    pass\ndef a():\n    pass\nimport zeta\nimport alpha\n"
+    cfg = Config(
+        sections=["imports", "functions"],
+        strategies={"functions": "alpha", "imports": "alpha"},
+    )
+    out = sort_source(src, cfg)
+    assert out.index("import alpha") < out.index("import zeta")
+    assert out.index("def a") < out.index("def b")
+
+
+# ------------------------------------------- strategy overrides (--strategy-overrides)
+def test_strategy_override_reorders_previously_kept() -> None:
+    # Without an override functions keep order; the override (functions=alpha)
+    # is exactly what `--strategy-overrides functions=alpha` injects into the config.
+    src = "def b():\n    pass\ndef a():\n    pass\n"
+    kept = sort_source(src, Config())
+    assert kept.index("def b") < kept.index("def a")
+    overridden = sort_source(src, Config(strategies={"functions": "alpha"}))
+    assert overridden.index("def a") < overridden.index("def b")
