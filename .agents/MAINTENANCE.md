@@ -17,15 +17,15 @@ How to keep `.agents/` files current.
 
 ## File update triggers
 
-| File | Update when |
-|------|-------------|
-| `ONBOARDING.md` | Project structure, tooling, or entry points change |
-| `POLICIES.md` | Boundaries, priorities, or verification change |
-| `FILES.md` | Path constants, config keys, or naming conventions change |
-| `HISTORY.md` | Notable decision made or resolved |
+| File            | Update when                                               |
+| --------------- | --------------------------------------------------------- |
+| `ONBOARDING.md` | Project structure, tooling, or entry points change        |
+| `POLICIES.md`   | Boundaries, priorities, or verification change            |
+| `FILES.md`      | Path constants, config keys, or naming conventions change |
+| `HISTORY.md`    | Notable decision made or resolved                         |
 
 ## Release process
 
 Pushing to `main` runs `.forgejo/workflows/release.yml`, which auto-creates a CalVer
-tag (`YYYY.M.D` / `YYYY.M.D.N`) and publishes a Forgejo release. To suppress, include
+tag (`YYYY.M.N`) and publishes a Forgejo release. To suppress, include
 `[skip release]` in the **head** commit message.
