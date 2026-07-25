@@ -44,7 +44,8 @@ csort --version
 ```
 
 Common options: `--config PATH`, `--exclude/-x GLOB`, `--no-recursive`,
-`--no-class-methods`, `--section-only SECTIONS`, `--strategy-overrides OVERRIDES`.
+`--no-class-methods`, `--section-only SECTIONS`, `--strategy-overrides OVERRIDES`,
+`--hoist-inline-imports`, `--remove-type-checking`.
 
 ```shell
 # editor / pre-commit friendly:
@@ -99,6 +100,49 @@ csort is conservative:
   skips the file; the same comment on a class trailing line
   (`class C:  # csort: off`) skips that class.
 - **Idempotent:** running `csort` twice never changes a file a second time.
+
+## Opt-in import transforms
+
+Two transforms go beyond reordering — they **mutate import statements** to fix
+common antipatterns. Both are **off by default** and **potentially breaking**
+(they change import timing). Enable them via CLI flags or `[transforms]` in
+config.
+
+### Hoist inline imports (`--hoist-inline-imports`)
+
+Moves `import`/`from ... import` statements nested inside function bodies to the
+top of the module. This fixes Ruff's `PLC0415` ("Import outside top-level") —
+inline imports bury dependencies and make the module's dependency graph unclear.
+
+```python
+# BEFORE                          # AFTER (--hoist-inline-imports)
+def _load():                      import json
+    import json                   def _load():
+    return json.loads(data)           return json.loads(data)
+```
+
+Duplicate imports from multiple functions are deduplicated. Imports inside
+nested functions, `if`/`try`/`with` blocks, or class bodies are left in place.
+
+### Remove TYPE_CHECKING (`--remove-type-checking`)
+
+Deletes `if TYPE_CHECKING:` guards, de-indents the imports they contained, and
+hoists them to the top. If `TYPE_CHECKING` was imported from `typing` and is now
+unused, that import is cleaned up too.
+
+`TYPE_CHECKING` guards diverge runtime from type-checker behaviour: guarded
+imports never run, yet type checkers treat them as if they do. Modern Python
+(`from __future__ import annotations`, PEP 563) makes them unnecessary.
+
+```python
+# BEFORE                          # AFTER (--remove-type-checking)
+from typing import TYPE_CHECKING  import http.client
+if TYPE_CHECKING:
+    import http.client
+```
+
+If the `TYPE_CHECKING` block contains non-import statements (runtime code), the
+block is left untouched for safety.
 
 ## Programmatic API
 
