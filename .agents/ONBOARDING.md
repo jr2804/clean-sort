@@ -1,21 +1,43 @@
-# Onboarding — clean-sort
+# AGENTS.md — ONBOARDING
 
-One-line project description: A clean, safe, deterministic Python module reorganizer that groups imports/globals/constants/classes/methods/etc into the right order.
+Read this when starting a new session. After first read, only revisit when
+project structure or tooling changes significantly.
 
-## Entry points
+## Project
 
-- **CLI**: `csort` (entry point in pyproject.toml)
-- **Python API**: `clean_sort.run()`
+clean-sort — an AST-based Python module reorganizer that deterministically groups
+imports/globals/constants/classes/methods into the correct order. Full docs at
+`README.md` and `docs/`.
 
-## Build/test commands
+## Quick start
 
-- **Build**: `uv build`
-- **Test**: `uv run pytest`
-- **Lint**: `uv run ruff check`
-- **Format**: `uv run ruff format`
+```bash
+uv run pytest      # run the test suite
+uv build           # build wheel + sdist
+csort check .      # verify files are already sorted
+mise format-md     # format/lint markdown
+```
 
-## Tools
+## Entry points (read these first)
 
-- **CodeGraph**: Available for code navigation
-- **grepai**: Available for code search
-- **repos**: Available for repository management
+| File | Why |
+|------|-----|
+| `AGENTS.md` | Root rail — rules + `.agents/` index |
+| `.agents/POLICIES.md` | Boundaries, priorities, verification |
+| `.agents/FILES.md` | Source-of-truth locations |
+| `src/clean_sort/__init__.py` | Public API (`sort_source`, `Config`, `load_config`) |
+
+## Where to dig deeper
+
+- `docs/` — user-facing documentation
+- `.agents/HISTORY.md` — past decisions and rationale
+- `src/clean_sort/AGENTS.md` — package-local contracts
+- `tests/AGENTS.md` — testing conventions
+
+## Available tools
+
+- **csort** — reorganize Python modules (CLI + `clean_sort` API)
+- **mise / uv** — task running, env, build, format, lint
+- **codegraph** — symbol search, call graphs
+- **grepai** — find code by intent
+- **bd / beads** — issue tracking and session persistence (`.agents/skills/beads/`)

@@ -1,22 +1,25 @@
-# History — clean-sort
+# AGENTS.md — HISTORY
 
-## 2026-07-08
+Recorded decisions with git references. Read when relevant to current task.
+Acts as simple long-term memory for the project.
 
-- Implemented core sorting logic (alpha, stepdown, abstraction)
-- Added config discovery and TOML support
-- Integrated undersort for in-class sorting
-- Built CLI with run/check/diff commands
-- Added 53 tests, all passing
-- Published release 2026.7.8.1
+## Format
 
-## 2026-07-07
+| Date | Decision | Rationale | Git ref |
+|------|----------|-----------|---------|
+| YYYY-MM-DD | [description] | [why] | [commit hash/tag] |
 
-- Scaffolded project with copier-uv-plus
-- Vendored undersort sorter
-- Implemented basic pipeline
+## Guidance
 
-## 2026-07-06
+- Record decisions that would be costly to rediscover.
+- Note false turns and why they were rejected.
+- Link to relevant commits.
+- Keep entries brief — enough to reconstruct reasoning.
 
-- Created Codeberg repository
-- Set up CalVer versioning
-- Configured Forgejo Actions for auto-releases
+## Decisions
+
+| Date | Decision | Rationale | Git ref |
+|------|----------|-----------|---------|
+| 2026-07-06 | Created Codeberg repo; adopted CalVer versioning; configured Forgejo Actions for auto-releases | Automated, date-based releases without manual tagging | — |
+| 2026-07-07 | Scaffolded with copier-uv-plus; vendored the undersort sorter | Reuse proven in-class method ordering | — |
+| 2026-07-08 | Implemented core sorting (alpha/stepdown/abstraction), config discovery, CLI (run/check/diff), 53 tests | First usable release | 2026.7.8.1 |
