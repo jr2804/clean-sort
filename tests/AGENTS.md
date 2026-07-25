@@ -23,6 +23,7 @@ Mirrors `src/clean_sort/` structure with one test file per module.
 
 - `uv run pytest` — full suite with coverage
 - `uv run pytest tests/test_cli.py` — CLI option coverage (`--section-only`, `--strategy-overrides`)
+- `uv run pytest tests/test_transforms.py` — opt-in import transforms (hoist, TYPE_CHECKING removal)
 
 ## Child DOX Index
 

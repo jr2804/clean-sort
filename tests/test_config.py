@@ -76,3 +76,19 @@ def test_no_config_returns_defaults(tmp_path: Path) -> None:
     cfg = load_config(start=tmp_path)
     assert cfg.sections == Config().sections
     assert cfg.config_path is None
+
+
+def test_transforms_table_parsed(tmp_path: Path) -> None:
+    (tmp_path / "csort.toml").write_text(
+        "[transforms]\nhoist_inline_imports = true\nremove_type_checking = true\n",
+        encoding="utf-8",
+    )
+    cfg = load_config(start=tmp_path)
+    assert cfg.hoist_inline_imports is True
+    assert cfg.remove_type_checking is True
+
+
+def test_transforms_default_off() -> None:
+    cfg = Config()
+    assert cfg.hoist_inline_imports is False
+    assert cfg.remove_type_checking is False
