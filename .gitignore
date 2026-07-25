@@ -47,3 +47,6 @@ config/mcporter.json
 # Beads / Dolt files (added by bd init)
 .beads/proxieddb/
 CLAUDE.md
+
+# documentation
+site/

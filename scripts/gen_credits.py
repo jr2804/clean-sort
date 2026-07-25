@@ -11,7 +11,11 @@ if sys.version_info >= (3, 11):
 else:
     import tomli as tomllib
 
-ROOT = Path(__file__).parent.parent
+try:
+    ROOT = Path(__file__).resolve().parent.parent
+except NameError:
+    # Executed without ``__file__`` (e.g. embedded in docs via ``markdown_exec``).
+    ROOT = Path.cwd()
 
 
 def load_credits() -> str:
