@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from typing import cast
 
 import libcst as cst
 
@@ -43,49 +44,27 @@ __all__ = [
 _NOQA_RE = re.compile(r"#\s*noqa\b", re.IGNORECASE)
 
 
-class _ImportExtractor(cst.CSTVisitor):
-    """Walk a function body and collect import statements in order.
-
-    Only visits the *immediate* statements of the body — does not descend into
-    nested functions, classes, or compound statements (``if``/``try``/etc.).
-    """
-
-    def __init__(self) -> None:
-        #: ``(small_statement, original_line)`` pairs, in source order.
-        self.found: list[tuple[cst.BaseSmallStatement, cst.SimpleStatementLine]] = []
-
-    def visit_FunctionDef(self, node: cst.FunctionDef) -> bool:  # noqa: N802, PLR6301
-        return False  # don't descend into nested functions
-
-    def visit_ClassDef(self, node: cst.ClassDef) -> bool:  # noqa: N802, PLR6301
-        return False  # don't descend into nested classes
-
-    def visit_SimpleStatementLine(self, node: cst.SimpleStatementLine) -> None:  # noqa: N802, PLR6301
-        for stmt in node.body:
-            if _is_simple_import(stmt):
-                self.found.append((stmt, node))
-
-
 # --------------------------------------------------------- inline import hoist
+
+
 class InlineImportHoister(cst.CSTTransformer):
     """Move ``import``/``from ... import`` statements out of function bodies.
 
-    Visits each top-level (and nested) ``FunctionDef``, extracts any import
-    statements directly in its body, and prepends them to the module's import
-    section. The extracted lines are removed from the function body.
+    Walks each function body recursively, extracting import statements at
+    *any* nesting depth inside compound statements (``try``/``if``/``with``/etc.)
+    and prepending them to the module's import section.
 
-    Only imports that are *direct children* of a function body are hoisted —
-    imports inside ``if``/``try``/``with`` blocks within the function are left
-    alone (they usually guard optional dependencies or conditional logic).
-    Imports inside nested functions are also left in place.
+    Imports inside **nested** functions/classes are left in place (the
+    recursive walker stops at ``FunctionDef``/``ClassDef`` boundaries).
     """
 
     def __init__(self) -> None:
         self._hoisted: list[cst.SimpleStatementLine] = []
 
     def visit_FunctionDef(self, node: cst.FunctionDef) -> bool:  # noqa: N802, PLR6301
-        # Only process the outermost FunctionDef; return False to prevent
-        # descending into nested FunctionDefs.
+        # Do NOT descend via normal visitor — we manually walk the body in
+        # leave_FunctionDef via _clean_imports_at_depth, which stops at
+        # nested FunctionDef/ClassDef boundaries.
         return False
 
     def leave_FunctionDef(  # noqa: N802
@@ -94,41 +73,21 @@ class InlineImportHoister(cst.CSTTransformer):
         if not isinstance(updated_node.body, cst.IndentedBlock):
             return updated_node
 
-        body_items = list(updated_node.body.body)
-        extractor = _ImportExtractor()
-        for item in body_items:
-            item.visit(extractor)
-
-        if not extractor.found:
+        cleaned_body, found = _clean_imports_at_depth(list(updated_node.body.body))
+        if not found:
             return updated_node
 
-        # Remove the hoisted lines from the function body.
-        hoisted_ids = {id(stmt) for stmt, _ in extractor.found}
-        new_body_items: list[cst.BaseStatement] = []
-        for item in body_items:
-            if isinstance(item, cst.SimpleStatementLine):
-                remaining = [s for s in item.body if id(s) not in hoisted_ids]
-                if remaining:
-                    new_body_items.append(item.with_changes(body=remaining))
-                # else: the entire line was imports — drop it
-            else:
-                new_body_items.append(item)
-
-        for stmt, original_line in extractor.found:
-            # Rebuild as a clean top-level line, then carry over the original
-            # line's trailing comment — stripped of any ``noqa`` directive,
-            # since the suppression was only justified by the inline location.
+        for stmt, original_line in found:
             flat = _flat_import_line(stmt)
             comment = original_line.trailing_whitespace.comment
             if comment is not None and _NOQA_RE.search(comment.value):
                 flat = _strip_noqa_from_line(flat)
             elif comment is not None:
-                # Preserve non-noqa comments with the standard two-space gap.
                 new_trailing = flat.trailing_whitespace.with_changes(comment=comment, whitespace=cst.SimpleWhitespace("  "))
                 flat = flat.with_changes(trailing_whitespace=new_trailing)
             self._hoisted.append(flat)
 
-        return updated_node.with_changes(body=updated_node.body.with_changes(body=new_body_items))
+        return updated_node.with_changes(body=updated_node.body.with_changes(body=cleaned_body))
 
     def leave_Module(self, original_node: cst.Module, updated_node: cst.Module) -> cst.Module:  # noqa: N802
         if not self._hoisted:
@@ -141,34 +100,32 @@ class InlineImportHoister(cst.CSTTransformer):
         return updated_node.with_changes(body=new_body)
 
 
-# ------------------------------------------------------- TYPE_CHECKING removal
 class TypeCheckingRemover(cst.CSTTransformer):
     """Delete ``if TYPE_CHECKING:`` guards and hoist their imports to the top.
 
-    For each top-level ``if TYPE_CHECKING:`` (or ``if typing.TYPE_CHECKING:``)
-    block, the contained import statements are extracted, de-indented, and
-    prepended to the module's import section. The dead ``if`` guard itself is
-    removed.
+    Walks the module tree recursively, dissolving ``if TYPE_CHECKING:``
+    (or ``if typing.TYPE_CHECKING:``) blocks at *any* nesting depth -- inside
+    functions, classes, try/if/with/for/while blocks, etc.  Contained import
+    statements are extracted, de-indented, and prepended to the module's
+    import section.  The dead ``if`` guard itself is removed.
     """
 
     def __init__(self) -> None:
         self._hoisted: list[cst.SimpleStatementLine] = []
 
+    def visit_FunctionDef(self, node: cst.FunctionDef) -> bool:  # noqa: N802, PLR6301
+        # Do NOT descend via normal visitor -- we manually walk the tree in
+        # leave_Module via _clean_type_checking_at_depth, which handles all
+        # compound statement types including FunctionDef/ClassDef.
+        return False
+
+    def visit_ClassDef(self, node: cst.ClassDef) -> bool:  # noqa: N802, PLR6301
+        return False
+
     def leave_Module(self, original_node: cst.Module, updated_node: cst.Module) -> cst.Module:  # noqa: N802
         body = list(updated_node.body)
-        new_body: list[cst.CSTNode] = []
-        removed = False
-
-        for node in body:
-            if isinstance(node, cst.If) and _is_type_checking_test(node.test):
-                extracted = _extract_imports_from_if(node)
-                if extracted is not None:
-                    self._hoisted.extend(_strip_noqa_from_line(line) for line in extracted)
-                    removed = True
-                    continue
-            new_body.append(node)
-
-        if not removed:
+        new_body = _clean_type_checking_at_depth(body, self._hoisted)
+        if not self._hoisted:
             return updated_node
 
         # Remove now-unused ``TYPE_CHECKING`` name from ``from typing import``.
@@ -178,6 +135,207 @@ class TypeCheckingRemover(cst.CSTTransformer):
         deduped = _deduplicate_imports(new_body[:insert_at], self._hoisted)
         result_body = new_body[:insert_at] + deduped + new_body[insert_at:]
         return updated_node.with_changes(body=result_body)
+
+
+# --------------------------------------------------------- inline import hoist
+def _clean_imports_at_depth(
+    stmts: Sequence[cst.CSTNode],
+) -> tuple[list[cst.BaseStatement], list[tuple[cst.BaseSmallStatement, cst.SimpleStatementLine]]]:
+    """Recursively remove import statements from ``stmts`` at any depth.
+
+    Handles compound statements (``If``, ``Try``, ``With``, ``For``, ``While``),
+    their sub-bodies (orelse, except handlers, finally), and ``IndentedBlock``.
+    Does **not** descend into nested ``FunctionDef`` or ``ClassDef``.
+
+    Returns ``(cleaned_statements, collected_imports)`` where
+    ``collected_imports`` is ``(small_statement, original_line)`` pairs.
+    """
+    collected: list[tuple[cst.BaseSmallStatement, cst.SimpleStatementLine]] = []
+    cleaned: list[cst.BaseStatement] = []
+
+    for stmt in stmts:
+        if isinstance(stmt, (cst.FunctionDef, cst.ClassDef)):
+            cleaned.append(stmt)
+            continue
+
+        if isinstance(stmt, cst.SimpleStatementLine):
+            non_imports: list[cst.BaseSmallStatement] = []
+            for s in stmt.body:
+                if _is_simple_import(s):
+                    collected.append((s, stmt))
+                else:
+                    non_imports.append(s)
+            if non_imports:
+                cleaned.append(stmt.with_changes(body=non_imports))
+            continue  # else: drop empty line
+
+        if isinstance(stmt, (cst.IndentedBlock,)):
+            inner_clean, inner_col = _clean_imports_at_depth(stmt.body)
+            collected.extend(inner_col)
+            if inner_clean:
+                cleaned.append(cast(cst.BaseStatement, stmt.with_changes(body=inner_clean)))
+            continue  # else: drop if empty
+
+        if isinstance(stmt, cst.If):
+            cleaned.append(_clean_if(stmt, collected))
+            continue
+
+        if isinstance(stmt, cst.Try):
+            cleaned.append(_clean_try(stmt, collected))
+            continue
+
+        if isinstance(stmt, cst.With):
+            inner_clean, inner_col = _clean_imports_at_depth(stmt.body.body)
+            collected.extend(inner_col)
+            cleaned.append(stmt.with_changes(body=stmt.body.with_changes(body=inner_clean)))
+            continue
+
+        if isinstance(stmt, (cst.For, cst.While)):
+            inner_clean, inner_col = _clean_imports_at_depth(stmt.body.body)
+            collected.extend(inner_col)
+            new_loop = stmt.with_changes(body=stmt.body.with_changes(body=inner_clean))
+            if stmt.orelse is not None:
+                orelse_clean, orelse_col = _clean_imports_at_depth(stmt.orelse.body.body)
+                collected.extend(orelse_col)
+                new_loop = new_loop.with_changes(orelse=stmt.orelse.with_changes(body=stmt.orelse.body.with_changes(body=orelse_clean)))
+            cleaned.append(new_loop)
+            continue
+
+        # Remaining items are BaseStatement at runtime — cast is safe.
+        cleaned.append(cast(cst.BaseStatement, stmt))
+
+    return cleaned, collected
+
+
+def _clean_if(node: cst.If, collected: list) -> cst.If:  # noqa: ANN001
+    """Clean imports from an ``If`` node (body + orelse chain)."""
+    inner_body, inner_col = _clean_imports_at_depth(node.body.body)
+    collected.extend(inner_col)
+    result = node.with_changes(body=node.body.with_changes(body=inner_body))
+
+    # Walk the orelse chain (can be another If or an IndentedBlock).
+    current = result.orelse
+    if isinstance(current, cst.If):
+        result = result.with_changes(orelse=_clean_if(current, collected))
+    elif isinstance(current, cst.IndentedBlock):
+        orelse_clean, orelse_col = _clean_imports_at_depth(current.body)
+        collected.extend(orelse_col)
+        result = result.with_changes(orelse=current.with_changes(body=orelse_clean))
+
+    return result
+
+
+def _clean_try(node: cst.Try, collected: list) -> cst.Try:  # noqa: ANN001
+    """Clean imports from a ``Try`` node (body + handlers + orelse + finalbody)."""
+    inner_body, inner_col = _clean_imports_at_depth(node.body.body)
+    collected.extend(inner_col)
+    result = node.with_changes(body=node.body.with_changes(body=inner_body))
+
+    # Except handlers
+    new_handlers: list[cst.ExceptHandler] = []
+    for handler in node.handlers:
+        h_clean, h_col = _clean_imports_at_depth(handler.body.body)
+        collected.extend(h_col)
+        new_handlers.append(handler.with_changes(body=handler.body.with_changes(body=h_clean)))
+    result = result.with_changes(handlers=new_handlers)
+
+    # Else body (Else.body is IndentedBlock)
+    if node.orelse is not None:
+        orelse_clean, orelse_col = _clean_imports_at_depth(node.orelse.body.body)
+        collected.extend(orelse_col)
+        result = result.with_changes(orelse=node.orelse.with_changes(body=node.orelse.body.with_changes(body=orelse_clean)))
+
+    # Finally body (Finally.body is IndentedBlock)
+    if node.finalbody is not None:
+        final_clean, final_col = _clean_imports_at_depth(node.finalbody.body.body)
+        collected.extend(final_col)
+        result = result.with_changes(finalbody=node.finalbody.with_changes(body=node.finalbody.body.with_changes(body=final_clean)))
+
+    return result
+
+
+# ------------------------------------------------------- TYPE_CHECKING removal
+
+
+def _clean_type_checking_at_depth(
+    stmts: Sequence[cst.CSTNode],
+    hoisted: list[cst.SimpleStatementLine],
+) -> list[cst.BaseStatement]:
+    """Recursively remove ``if TYPE_CHECKING:`` blocks from ``stmts`` at any depth.
+
+    Descends into ``try``, ``if``, ``with``, ``for``, ``while``, ``FunctionDef``,
+    and ``ClassDef`` bodies, extracting and hoisting TYPE_CHECKING-guarded imports
+    wherever they appear.  Returns the cleaned statement list; appends hoisted
+    import lines to ``hoisted``.
+    """
+    cleaned: list[cst.BaseStatement] = []
+
+    for stmt in stmts:
+        if isinstance(stmt, cst.If) and _is_type_checking_test(stmt.test):
+            extracted = _extract_imports_from_if(stmt)
+            if extracted is not None:
+                hoisted.extend(_strip_noqa_from_line(line) for line in extracted)
+                continue  # drop the entire if TYPE_CHECKING block
+
+        if isinstance(stmt, (cst.FunctionDef, cst.ClassDef)) and isinstance(stmt.body, cst.IndentedBlock):
+            inner_clean = _clean_type_checking_at_depth(stmt.body.body, hoisted)
+            cleaned.append(stmt.with_changes(body=stmt.body.with_changes(body=inner_clean)))
+        elif isinstance(stmt, cst.Try):
+            cleaned.append(_clean_try_for_type_checking(stmt, hoisted))
+        elif isinstance(stmt, cst.If):
+            # non-TYPE_CHECKING if -- recurse into sub-bodies
+            cleaned.append(_clean_if_for_type_checking(stmt, hoisted))
+        elif isinstance(stmt, cst.With):
+            inner_clean = _clean_type_checking_at_depth(stmt.body.body, hoisted)
+            cleaned.append(stmt.with_changes(body=stmt.body.with_changes(body=inner_clean)))
+        elif isinstance(stmt, (cst.For, cst.While)):
+            inner_clean = _clean_type_checking_at_depth(stmt.body.body, hoisted)
+            new_stmt = stmt.with_changes(body=stmt.body.with_changes(body=inner_clean))
+            if stmt.orelse is not None:
+                orelse_clean = _clean_type_checking_at_depth(stmt.orelse.body.body, hoisted)
+                new_stmt = new_stmt.with_changes(orelse=stmt.orelse.with_changes(body=stmt.orelse.body.with_changes(body=orelse_clean)))
+            cleaned.append(new_stmt)
+        else:
+            cleaned.append(cast(cst.BaseStatement, stmt))
+
+    return cleaned
+
+
+def _clean_try_for_type_checking(node: cst.Try, hoisted: list[cst.SimpleStatementLine]) -> cst.Try:
+    """Clean TYPE_CHECKING blocks from a ``Try`` node's sub-bodies."""
+    inner_body = _clean_type_checking_at_depth(list(node.body.body), hoisted)
+    result = node.with_changes(body=node.body.with_changes(body=inner_body))
+
+    new_handlers: list[cst.ExceptHandler] = []
+    for handler in node.handlers:
+        h_clean = _clean_type_checking_at_depth(list(handler.body.body), hoisted)
+        new_handlers.append(handler.with_changes(body=handler.body.with_changes(body=h_clean)))
+    result = result.with_changes(handlers=new_handlers)
+
+    if node.orelse is not None:
+        orelse_clean = _clean_type_checking_at_depth(list(node.orelse.body.body), hoisted)
+        result = result.with_changes(orelse=node.orelse.with_changes(body=node.orelse.body.with_changes(body=orelse_clean)))
+
+    if node.finalbody is not None:
+        final_clean = _clean_type_checking_at_depth(list(node.finalbody.body.body), hoisted)
+        result = result.with_changes(finalbody=node.finalbody.with_changes(body=node.finalbody.body.with_changes(body=final_clean)))
+
+    return result
+
+
+def _clean_if_for_type_checking(node: cst.If, hoisted: list[cst.SimpleStatementLine]) -> cst.If:
+    """Clean TYPE_CHECKING blocks from an ``If`` node's sub-bodies (body + orelse)."""
+    inner_body = _clean_type_checking_at_depth(list(node.body.body), hoisted)
+    result = node.with_changes(body=node.body.with_changes(body=inner_body))
+
+    current = result.orelse
+    if isinstance(current, cst.If):
+        result = result.with_changes(orelse=_clean_if_for_type_checking(current, hoisted))
+    elif isinstance(current, cst.IndentedBlock):
+        orelse_clean = _clean_type_checking_at_depth(list(current.body), hoisted)
+        result = result.with_changes(orelse=current.with_changes(body=orelse_clean))
+
+    return result
 
 
 # --------------------------------------------------------------------- helpers
