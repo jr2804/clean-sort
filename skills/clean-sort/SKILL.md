@@ -124,6 +124,9 @@ def _load():                      import json
 Duplicate imports from multiple functions are deduplicated. Imports inside
 nested functions, `if`/`try`/`with` blocks, or class bodies are left in place.
 
+Any `# noqa` linter-exclusion comment on a hoisted import is automatically
+stripped — the suppression was only justified by the inline location.
+
 ### Remove TYPE_CHECKING (`--remove-type-checking`)
 
 Deletes `if TYPE_CHECKING:` guards, de-indents the imports they contained, and
@@ -143,6 +146,9 @@ if TYPE_CHECKING:
 
 If the `TYPE_CHECKING` block contains non-import statements (runtime code), the
 block is left untouched for safety.
+
+Any `# noqa` linter-exclusion comment on a dissolved import is automatically
+stripped — the suppression was only justified by the TYPE_CHECKING guard.
 
 ## Programmatic API
 
