@@ -132,3 +132,20 @@ def test_strategy_overrides_multiple_sections(tmp_path: Path, monkeypatch) -> No
     assert res.exit_code == 0
     assert res.output.index("import alpha") < res.output.index("import zeta")
     assert res.output.index("def a") < res.output.index("def b")
+
+
+def test_hoist_inline_imports_flag(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    src = "def f():\n    import json\n    return json.loads('{}')\n"
+    res = runner.invoke(app, ["run", "-", "--hoist-inline-imports"], input=src)
+    assert res.exit_code == 0
+    assert res.output.index("import json") < res.output.index("def f")
+
+
+def test_remove_type_checking_flag(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    src = "if TYPE_CHECKING:\n    import http.client\n\nx = 1\n"
+    res = runner.invoke(app, ["run", "-", "--remove-type-checking"], input=src)
+    assert res.exit_code == 0
+    assert "TYPE_CHECKING" not in res.output
+    assert "import http.client" in res.output
