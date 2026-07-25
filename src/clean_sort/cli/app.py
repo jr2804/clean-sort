@@ -13,12 +13,13 @@ from __future__ import annotations
 import difflib
 import fnmatch
 import sys
+import warnings
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from clean_sort import Config, __version__, load_config, sort_source
+from clean_sort import VALID_STRATEGIES, Config, __version__, load_config, sort_source
 
 # `app`/`config_app` are runtime setup used by the decorators below; csort treats
 # such unrecognised top-level statements as barriers and will not move them.
@@ -64,6 +65,20 @@ NoRecursiveOpt = Annotated[
 NoClassMethodsOpt = Annotated[
     bool,
     typer.Option("--no-class-methods", help="Disable in-class method sorting."),
+]
+SectionOnlyOpt = Annotated[
+    str | None,
+    typer.Option(
+        "--section-only",
+        help="Restrict reordering to these comma-separated sections (others stay in place).",
+    ),
+]
+StrategyOverridesOpt = Annotated[
+    str | None,
+    typer.Option(
+        "--strategy-overrides",
+        help="Override per-section strategies, e.g. 'functions=alpha,classes=keep'.",
+    ),
 ]
 PathsArg = Annotated[
     list[Path] | None,
@@ -129,10 +144,29 @@ def version() -> None:
 def _build_config(
     explicit: Path | None,
     no_class_methods: bool,
+    section_only: str | None = None,
+    strategy_overrides: str | None = None,
 ) -> Config:
     cfg = load_config(explicit=explicit, start=Path.cwd())
     if no_class_methods:
         cfg.class_methods_enabled = False
+    if section_only:
+        cfg.sections = [s.strip() for s in section_only.split(",") if s.strip()]
+    if strategy_overrides:
+        for raw in strategy_overrides.split(","):
+            item = raw.strip()
+            if not item or "=" not in item:
+                warnings.warn(f"csort: ignoring malformed strategy override {item!r}", stacklevel=2)
+                continue
+            name, value = item.split("=", 1)
+            name, value = name.strip(), value.strip()
+            if value in VALID_STRATEGIES:
+                cfg.strategies[name] = value  # type: ignore[assignment]
+            else:
+                warnings.warn(
+                    f"csort: unknown strategy {value!r} for section {name!r}; ignoring",
+                    stacklevel=2,
+                )
     return cfg
 
 
@@ -230,8 +264,10 @@ def _run(
     exclude: list[str] | None,
     no_recursive: bool,
     no_class_methods: bool,
+    section_only: str | None = None,
+    strategy_overrides: str | None = None,
 ) -> None:
-    cfg = _build_config(config, no_class_methods)
+    cfg = _build_config(config, no_class_methods, section_only, strategy_overrides)
     paths = paths or [Path.cwd()]
     if any(p.name == "-" for p in paths):
         raise typer.Exit(_process_stdin(cfg, mode))
@@ -255,13 +291,15 @@ def run(
     exclude: ExcludeOpt = None,
     no_recursive: NoRecursiveOpt = False,
     no_class_methods: NoClassMethodsOpt = False,
+    section_only: SectionOnlyOpt = None,
+    strategy_overrides: StrategyOverridesOpt = None,
 ) -> None:
     """Sort Python files in place (or stdin -> stdout with ``-``).
 
     Exits with code 1 if any file was changed (pre-commit / CI friendly),
     2 on errors. stdin mode always exits 0.
     """
-    _run(paths, "run", config, exclude, no_recursive, no_class_methods)
+    _run(paths, "run", config, exclude, no_recursive, no_class_methods, section_only, strategy_overrides)
 
 
 @app.command()
@@ -271,9 +309,11 @@ def check(
     exclude: ExcludeOpt = None,
     no_recursive: NoRecursiveOpt = False,
     no_class_methods: NoClassMethodsOpt = False,
+    section_only: SectionOnlyOpt = None,
+    strategy_overrides: StrategyOverridesOpt = None,
 ) -> None:
     """Exit non-zero if any file would be changed by sorting."""
-    _run(paths, "check", config, exclude, no_recursive, no_class_methods)
+    _run(paths, "check", config, exclude, no_recursive, no_class_methods, section_only, strategy_overrides)
 
 
 @app.command()
@@ -283,9 +323,11 @@ def diff(
     exclude: ExcludeOpt = None,
     no_recursive: NoRecursiveOpt = False,
     no_class_methods: NoClassMethodsOpt = False,
+    section_only: SectionOnlyOpt = None,
+    strategy_overrides: StrategyOverridesOpt = None,
 ) -> None:
     """Print unified diffs of the changes csort would make."""
-    _run(paths, "diff", config, exclude, no_recursive, no_class_methods)
+    _run(paths, "diff", config, exclude, no_recursive, no_class_methods, section_only, strategy_overrides)
 
 
 @config_app.command("init")

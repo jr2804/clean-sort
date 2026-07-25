@@ -132,11 +132,10 @@ def _strip_leading_blanks(nodes: list[cst.CSTNode]) -> tuple[cst.CSTNode, ...]:
 def sort_source(source: str, cfg: Config, *, filename: str = "<unknown>") -> str:
     """Return ``source`` sorted according to ``cfg``.
 
-    1. (optional) run the import engine on the raw text;
-    2. parse with libcst;
-    3. bail out untouched if the file is disabled (``# csort: off`` header);
-    4. reorder top-level statements by section;
-    5. (optional) reorder methods within each class.
+    1. parse with libcst;
+    2. bail out untouched if the file is disabled (``# csort: off`` header);
+    3. reorder top-level statements by section;
+    4. (optional) reorder methods within each class.
     """
     module = cst.parse_module(source)
     if undersort.file_disabled(module):
