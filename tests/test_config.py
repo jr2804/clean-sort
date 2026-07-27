@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import textwrap
 import warnings
 from pathlib import Path
 
@@ -92,3 +93,79 @@ def test_transforms_default_off() -> None:
     cfg = Config()
     assert cfg.hoist_inline_imports is False
     assert cfg.remove_type_checking is False
+
+
+# ------------------------------------------------------------ legacy [tool.undersort]
+def test_legacy_tool_undersort_pyproject(tmp_path: Path) -> None:
+    # pyproject.toml spelling of the legacy config is honoured when the csort
+    # class_methods table is absent.
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        textwrap.dedent(
+            """\
+            [tool.undersort]
+            order = ["private", "protected", "public"]
+            method_type_order = ["static", "instance", "class"]
+            """
+        ),
+        encoding="utf-8",
+    )
+    cfg = load_config(explicit=pyproject)
+    assert cfg.class_methods_order == ["private", "protected", "public"]
+    assert cfg.class_methods_type_order == ["static", "instance", "class"]
+    assert cfg.class_methods_enabled is True  # legacy schema predates enabled
+
+
+def test_legacy_top_level_undersort_csort_toml(tmp_path: Path) -> None:
+    # Standalone csort.toml also accepts a top-level [undersort] table.
+    csort_toml = tmp_path / "csort.toml"
+    csort_toml.write_text(
+        textwrap.dedent(
+            """\
+            [undersort]
+            order = ["public", "private", "protected"]
+            """
+        ),
+        encoding="utf-8",
+    )
+    cfg = load_config(explicit=csort_toml)
+    assert cfg.class_methods_order == ["public", "private", "protected"]
+    assert cfg.class_methods_type_order == ["instance", "class", "static"]  # default
+
+
+def test_csort_class_methods_wins_over_legacy(tmp_path: Path) -> None:
+    # When both tables exist the csort one (closer, scoped to class_methods)
+    # takes precedence.
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        textwrap.dedent(
+            """\
+            [tool.csort.class_methods]
+            order = ["public", "protected", "private"]
+
+            [tool.undersort]
+            order = ["private", "protected", "public"]
+            """
+        ),
+        encoding="utf-8",
+    )
+    cfg = load_config(explicit=pyproject)
+    assert cfg.class_methods_order == ["public", "protected", "private"]
+
+
+def test_legacy_invalid_order_warns(tmp_path: Path) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        textwrap.dedent(
+            """\
+            [tool.undersort]
+            order = ["bogus"]
+            """
+        ),
+        encoding="utf-8",
+    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        cfg = load_config(explicit=pyproject)
+    assert cfg.class_methods_order == ["public", "protected", "private"]  # default
+    assert any("invalid class_methods_order" in str(w.message) for w in caught)
