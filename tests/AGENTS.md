@@ -22,7 +22,9 @@ Mirrors `src/clean_sort/` structure with one test file per module.
 ## Verification
 
 - `uv run pytest` — full suite with coverage
-- `uv run pytest tests/test_cli.py` — CLI option coverage (`--section-only`, `--strategy-overrides`)
+- `uv run pytest tests/test_cli.py` — CLI option coverage (`--section-only`, `--strategy-overrides`, `--class-methods-order`, `--method-type-order`)
+- `uv run pytest tests/test_undersort.py` — `MethodSorter` unit tests (visibility/type buckets, ordering, `nosort` / `csort: off` directives, modified flag)
+- `uv run pytest tests/test_config.py` — config discovery, legacy `[tool.undersort]` fallback
 - `uv run pytest tests/test_transforms.py` — opt-in import transforms (hoist, TYPE_CHECKING removal)
 
 ## Child DOX Index

@@ -21,11 +21,13 @@ wins**, walking up from the file's own directory:
 
 If no configuration is found, built-in defaults are used.
 
-> ### Legacy `[tool.undersort]`
+> ### Legacy `[tool.undersort]` / `[undersort]`
 >
 > For backwards compatibility, `class_methods.order` and
 > `class_methods.method_type_order` are read from a `[tool.undersort]` table
-> when `[tool.csort.class_methods]` is absent. Prefer `[tool.csort]`.
+> (in `pyproject.toml`) or a top-level `[undersort]` table (in standalone
+> configs) when `[tool.csort.class_methods]` is absent. The `enabled` flag
+> predates the legacy schema and is csort-only. Prefer `[tool.csort]`.
 
 ### Schema
 
@@ -99,12 +101,18 @@ constants_pattern = "^[A-Z][A-Z0-9_]*$"
 
 ### Command-line overrides
 
-Two flags let you deviate from the file config without editing it:
+Four flags let you deviate from the file config without editing it:
 
-| Flag                   | Effect                                                     |
-| ---------------------- | ---------------------------------------------------------- |
-| `--section-only`       | Restrict reordering to the given comma-separated sections. |
-| `--strategy-overrides` | Override per-section strategy, e.g. `functions=alpha`.     |
+| Flag                     | Effect                                                                   |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `--section-only`         | Restrict reordering to the given comma-separated sections.               |
+| `--strategy-overrides`   | Override per-section strategy, e.g. `functions=alpha`.                   |
+| `--class-methods-order`  | Override method visibility order, e.g. `private,public,protected`.       |
+| `--method-type-order`    | Override method-type order, e.g. `static,instance,class`.                |
+
+The latter two accept a **permutation** of `public`/`protected`/`private` or
+`instance`/`class`/`static` respectively; an invalid permutation warns and
+falls back to the configured order.
 
 ```shell
 # Only reorder the functions section, using step-down ordering:
@@ -112,10 +120,13 @@ csort run src/ --section-only functions --strategy-overrides functions=stepdown
 
 # Restrict to several sections; each reorders independently:
 csort run src/ --section-only functions,classes --strategy-overrides functions=stepdown,classes=keep
+
+# Reorder methods so private comes first, regardless of the file config:
+csort run src/ --class-methods-order private,protected,public
 ```
 
-These map onto `Config.sections` and `Config.strategies` respectively and are
-resolved on top of the discovered file config.
+These map onto the corresponding `Config` fields and are resolved on top of
+the discovered file config.
 
 ### Opt-out directives
 
@@ -131,7 +142,9 @@ from clean_sort import Config, sort_source
 
 cfg = Config(
     strategies={"functions": "stepdown", "enums": "alpha"},
-    class_methods={"enabled": True, "order": ["public", "protected", "private"]},
+    class_methods_enabled=True,
+    class_methods_order=["public", "protected", "private"],
+    class_methods_type_order=["instance", "class", "static"],
 )
 sorted_text = sort_source(source_text, cfg)
 ```

@@ -15,6 +15,10 @@ Core library code. Config and the Typer CLI also live here (`config.py`, `cli/ap
 - In-section strategy per section via `Config.strategies`: `keep` | `alpha` | `stepdown` | `abstraction`.
 - Unrecognised top-level nodes land in `unknown_section` (default `other`) and act as barriers — never reordered.
 - `undersort.py` (`MethodSorter`) reorders in-class methods; it is this project's own sorter, not an external tool.
+  Legacy users may still set `class_methods.order` and `class_methods.method_type_order` under a
+  `[tool.undersort]` table (in `pyproject.toml`) or a top-level `[undersort]` table (in standalone
+  configs); `Config.load` falls back to that when `[tool.csort.class_methods]` is absent. The CLI
+  mirrors both knobs with `--class-methods-order` and `--method-type-order` on every command.
 - Opt-in import transforms (`transforms.py`) are the only transforms that mutate code beyond reordering:
   `hoist_inline_imports` and `remove_type_checking`. Both default off, run as a pre-pass before
   section sorting, and are potentially breaking (they change import timing).
