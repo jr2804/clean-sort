@@ -149,3 +149,46 @@ def test_remove_type_checking_flag(tmp_path: Path, monkeypatch) -> None:  # noqa
     assert res.exit_code == 0
     assert "TYPE_CHECKING" not in res.output
     assert "import http.client" in res.output
+
+
+def test_class_methods_order_override(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    # base csort config keeps the default ordering (public first); the CLI
+    # override flips visibility so private comes first.
+    (tmp_path / "csort.toml").write_text("[class_methods]\nenabled = true\n", encoding="utf-8")
+    src = "class C:\n    def pub(self):\n        pass\n    def __priv(self):\n        pass\n"
+    res = runner.invoke(
+        app,
+        ["run", "-", "--class-methods-order", "private,public,protected"],
+        input=src,
+    )
+    assert res.exit_code == 0
+    assert res.output.index("def __priv") < res.output.index("def pub")
+
+
+def test_method_type_order_override(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text("[class_methods]\nenabled = true\n", encoding="utf-8")
+    src = "class C:\n    def i(self):\n        pass\n    @staticmethod\n    def s():\n        pass\n"
+    res = runner.invoke(
+        app,
+        ["run", "-", "--method-type-order", "static,instance,class"],
+        input=src,
+    )
+    assert res.exit_code == 0
+    assert res.output.index("def s") < res.output.index("def i")
+
+
+def test_class_methods_order_invalid_is_ignored(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text("[class_methods]\nenabled = true\n", encoding="utf-8")
+    src = "class C:\n    def _prot(self):\n        pass\n    def pub(self):\n        pass\n"
+    # bogus value warns and falls back to the configured order
+    # (public before protected by default).
+    res = runner.invoke(
+        app,
+        ["run", "-", "--class-methods-order", "bogus,public"],
+        input=src,
+    )
+    assert res.exit_code == 0
+    assert res.output.index("def pub") < res.output.index("def _prot")
