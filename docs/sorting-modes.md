@@ -144,7 +144,20 @@ class Service:
 
 Configure the grouping under `[tool.csort.class_methods]`, or disable it with
 `enabled = false`. A `class C:  # csort: off` trailing comment opts a single
-class out.
+class out; `# nosort` works the same. Per-method `# nosort` (or `# csort: off`)
+locks that single method at its original index even when the class is reordered.
+
+For one-off invocations, pass the overrides on the command line:
+
+```shell
+csort run src/ --class-methods-order private,protected,public
+csort run src/ --method-type-order static,instance,class
+```
+
+These resolve on top of the discovered file config and apply to every command
+(`run`, `check`, `diff`). The legacy `[tool.undersort]` (or top-level
+`[undersort]` in standalone configs) is still read for `order` and
+`method_type_order` when `[tool.csort.class_methods]` is absent.
 
 ### Trying it out safely
 
