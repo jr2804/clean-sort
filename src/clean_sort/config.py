@@ -78,7 +78,14 @@ class Config:
 
     # ------------------------------------------------------------------ build
     @classmethod
-    def from_table(cls, data: dict[str, Any], *, path: Path | None = None) -> Config:
+    def from_table(
+        cls,
+        data: dict[str, Any],
+        *,
+        path: Path | None = None,
+        raw: dict[str, Any] | None = None,
+        is_pyproject: bool = False,
+    ) -> Config:
         """Build a :class:`Config` from a parsed ``csort`` table."""
         cfg = cls(config_path=path)
 
@@ -102,10 +109,10 @@ class Config:
                     )
 
         cm = data.get("class_methods", {}) or {}
-        if isinstance(cm, dict):
-            cfg.class_methods_enabled = bool(cm.get("enabled", cfg.class_methods_enabled))
-            cfg._set_order(cm.get("order"), attr="class_methods_order")
-            cfg._set_order(cm.get("method_type_order"), attr="class_methods_type_order")
+        if isinstance(cm, dict) and cm:
+            cfg._apply_class_methods(cm)
+        elif raw is not None:
+            cfg._apply_class_methods(_legacy_undersort_overrides(raw, is_pyproject=is_pyproject))
 
         classification = data.get("classification", {}) or {}
         if isinstance(classification, dict) and "constants_pattern" in classification:
@@ -131,8 +138,41 @@ class Config:
             warnings.warn(f"csort: invalid {attr}={value!r}; using default", stacklevel=2)
             # keep default
 
+    def _apply_class_methods(self, cm: dict[str, Any]) -> None:
+        """Apply a ``class_methods`` table (either csort or legacy undersort).
 
-# --------------------------------------------------------------------- loading
+        ``enabled`` is csort-only; the legacy schema predates that key, so it
+        defaults to the current value when absent.
+        """
+        if "enabled" in cm:
+            self.class_methods_enabled = bool(cm["enabled"])
+        self._set_order(cm.get("order"), attr="class_methods_order")
+        self._set_order(cm.get("method_type_order"), attr="class_methods_type_order")
+
+
+def _legacy_undersort_overrides(data: dict[str, Any], *, is_pyproject: bool) -> dict[str, Any]:
+    """Pull ``class_methods`` overrides from a legacy ``[undersort]`` table.
+
+    Two spellings are honored:
+
+    * ``[tool.undersort]`` in ``pyproject.toml``;
+    * ``[undersort]`` (or ``[tool.undersort]``) inside a standalone config.
+
+    Only ``order`` and ``method_type_order`` are part of the legacy schema; an
+    empty result falls through to the csort defaults.
+    """
+    candidates: list[dict[str, Any]] = []
+    if is_pyproject:
+        candidates.append(data.get("tool", {}).get("undersort") or {})
+    else:
+        candidates.append(data.get("undersort") or {})
+        candidates.append(data.get("tool", {}).get("undersort") or {})
+    for table in candidates:
+        if isinstance(table, dict) and table:
+            return table
+    return {}
+
+
 def _read_toml(path: Path) -> dict[str, Any]:
     with path.open("rb") as fh:
         return tomllib.load(fh)
@@ -190,7 +230,7 @@ def load(
 
     is_pyproject = path.name == "pyproject.toml"
     table = _csort_table_from_data(data, is_pyproject=is_pyproject)
-    cfg = Config.from_table(table, path=path)
+    cfg = Config.from_table(table, path=path, raw=data, is_pyproject=is_pyproject)
 
     return cfg
 
