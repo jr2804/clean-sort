@@ -20,7 +20,7 @@ from typing import Annotated, cast
 import typer
 
 from clean_sort import VALID_STRATEGIES, Config, __version__, load_config, sort_source
-from clean_sort.config import SectionStrategy
+from clean_sort.config import _VALID_MTYPES, _VALID_VIS, SectionStrategy
 
 # `app`/`config_app` are runtime setup used by the decorators below; csort treats
 # such unrecognised top-level statements as barriers and will not move them.
@@ -79,6 +79,20 @@ StrategyOverridesOpt = Annotated[
     typer.Option(
         "--strategy-overrides",
         help="Override per-section strategies, e.g. 'functions=alpha,classes=keep'.",
+    ),
+]
+ClassMethodsOrderOpt = Annotated[
+    str | None,
+    typer.Option(
+        "--class-methods-order",
+        help="Override method visibility order, e.g. 'public,protected,private'.",
+    ),
+]
+MethodTypeOrderOpt = Annotated[
+    str | None,
+    typer.Option(
+        "--method-type-order",
+        help="Override method-type order, e.g. 'instance,class,static'.",
     ),
 ]
 HoistInlineImportsOpt = Annotated[
@@ -156,6 +170,18 @@ def version() -> None:
 
 
 # ----------------------------------------------------------------- file helpers
+def _parse_permutation(value: str, *, valid: frozenset[str], flag: str) -> list[str]:
+    """Parse and validate a comma-separated permutation of ``valid`` values."""
+    items = [item.strip() for item in value.split(",") if item.strip()]
+    if set(items) != set(valid):
+        warnings.warn(
+            f"csort: {flag}={value!r} must be a permutation of {sorted(valid)}; ignoring",
+            stacklevel=2,
+        )
+        return []
+    return items
+
+
 def _build_config(
     explicit: Path | None,
     no_class_methods: bool,
@@ -163,6 +189,8 @@ def _build_config(
     strategy_overrides: str | None = None,
     hoist_inline_imports: bool = False,
     remove_type_checking: bool = False,
+    class_methods_order: str | None = None,
+    method_type_order: str | None = None,
 ) -> Config:
     cfg = load_config(explicit=explicit, start=Path.cwd())
     if no_class_methods:
@@ -188,6 +216,14 @@ def _build_config(
                     f"csort: unknown strategy {value!r} for section {name!r}; ignoring",
                     stacklevel=2,
                 )
+    if class_methods_order:
+        parsed = _parse_permutation(class_methods_order, valid=_VALID_VIS, flag="--class-methods-order")
+        if parsed:
+            cfg.class_methods_order = parsed
+    if method_type_order:
+        parsed = _parse_permutation(method_type_order, valid=_VALID_MTYPES, flag="--method-type-order")
+        if parsed:
+            cfg.class_methods_type_order = parsed
     return cfg
 
 
@@ -289,6 +325,8 @@ def _run(
     strategy_overrides: str | None = None,
     hoist_inline_imports: bool = False,
     remove_type_checking: bool = False,
+    class_methods_order: str | None = None,
+    method_type_order: str | None = None,
 ) -> None:
     cfg = _build_config(
         config,
@@ -297,6 +335,8 @@ def _run(
         strategy_overrides,
         hoist_inline_imports=hoist_inline_imports,
         remove_type_checking=remove_type_checking,
+        class_methods_order=class_methods_order,
+        method_type_order=method_type_order,
     )
     paths = paths or [Path.cwd()]
     if any(p.name == "-" for p in paths):
@@ -325,6 +365,8 @@ def run(
     strategy_overrides: StrategyOverridesOpt = None,
     hoist_inline_imports: HoistInlineImportsOpt = False,
     remove_type_checking: RemoveTypeCheckingOpt = False,
+    class_methods_order: ClassMethodsOrderOpt = None,
+    method_type_order: MethodTypeOrderOpt = None,
 ) -> None:
     """Sort Python files in place (or stdin -> stdout with ``-``).
 
@@ -342,6 +384,8 @@ def run(
         strategy_overrides,
         hoist_inline_imports=hoist_inline_imports,
         remove_type_checking=remove_type_checking,
+        class_methods_order=class_methods_order,
+        method_type_order=method_type_order,
     )
 
 
@@ -356,6 +400,8 @@ def check(
     strategy_overrides: StrategyOverridesOpt = None,
     hoist_inline_imports: HoistInlineImportsOpt = False,
     remove_type_checking: RemoveTypeCheckingOpt = False,
+    class_methods_order: ClassMethodsOrderOpt = None,
+    method_type_order: MethodTypeOrderOpt = None,
 ) -> None:
     """Exit non-zero if any file would be changed by sorting."""
     _run(
@@ -369,6 +415,8 @@ def check(
         strategy_overrides,
         hoist_inline_imports=hoist_inline_imports,
         remove_type_checking=remove_type_checking,
+        class_methods_order=class_methods_order,
+        method_type_order=method_type_order,
     )
 
 
@@ -383,6 +431,8 @@ def diff(
     strategy_overrides: StrategyOverridesOpt = None,
     hoist_inline_imports: HoistInlineImportsOpt = False,
     remove_type_checking: RemoveTypeCheckingOpt = False,
+    class_methods_order: ClassMethodsOrderOpt = None,
+    method_type_order: MethodTypeOrderOpt = None,
 ) -> None:
     """Print unified diffs of the changes csort would make."""
     _run(
@@ -396,6 +446,8 @@ def diff(
         strategy_overrides,
         hoist_inline_imports=hoist_inline_imports,
         remove_type_checking=remove_type_checking,
+        class_methods_order=class_methods_order,
+        method_type_order=method_type_order,
     )
 
 
