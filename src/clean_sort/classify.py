@@ -7,18 +7,36 @@ Unrecognised statements fall back to :attr:`Config.unknown_section`.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
+from dataclasses import dataclass
 
 import libcst as cst
 
 __all__ = [
+    "ClassifyContext",
     "classify",
     "is_future_import",
     "is_module_docstring",
+    "module_top_level_names",
     "primary_name",
     "referenced_names",
 ]
 
+
 _ENUM_SUFFIXES = ("Enum", "Flag")
+
+@dataclass
+class ClassifyContext:
+    """Context passed to :func:`classify` for forward-reference detection.
+
+    Attributes:
+        later_section_names: Names whose section comes after
+            ``module_constants`` in the configured section order. A constant
+            whose RHS references any of these is treated as a barrier,
+            preventing ``NameError`` at import time.
+    """
+
+    later_section_names: set[str]
 
 
 def is_module_docstring(node: cst.CSTNode) -> bool:
@@ -36,8 +54,14 @@ def is_future_import(node: cst.CSTNode) -> bool:
     return any(isinstance(stmt, cst.ImportFrom) and _dotted(stmt.module) == "__future__" for stmt in node.body)
 
 
-def classify(node: cst.CSTNode, cfg) -> str:  # noqa: ANN001, PLR0911 - duck-typed Config
-    """Classify a top-level statement into a section key."""
+def classify(node: cst.CSTNode, cfg, *, ctx: ClassifyContext | None = None) -> str:  # noqa: ANN001, PLR0911 - duck-typed Config
+    """Classify a top-level statement into a section key.
+
+    When ``ctx`` is provided, a ``module_constants`` assignment whose RHS
+    references a name defined later in the module is downgraded to
+    :attr:`Config.unknown_section` (treated as a barrier), preventing
+    ``NameError`` at import time.
+    """
     if isinstance(node, cst.If):
         if _is_main_guard(node):
             return "main_block"
@@ -57,6 +81,8 @@ def classify(node: cst.CSTNode, cfg) -> str:  # noqa: ANN001, PLR0911 - duck-typ
         if smalls and all(isinstance(s, (cst.Import, cst.ImportFrom)) for s in smalls):
             return "imports"
         if _is_constant_assignment(node, cfg):
+            if ctx is not None and _has_forward_ref(node, ctx):
+                return cfg.unknown_section
             return "module_constants"
     return cfg.unknown_section
 
@@ -95,6 +121,66 @@ def _is_dataclass(class_node: cst.ClassDef) -> bool:
         if ident == "dataclass":
             return True
     return False
+
+
+def has_future_annotations(module: cst.Module) -> bool:
+    """True when the module has ``from __future__ import annotations``."""
+    for node in module.body:
+        if not isinstance(node, cst.SimpleStatementLine):
+            continue
+        for stmt in node.body:
+            if isinstance(stmt, cst.ImportFrom) and _dotted(stmt.module) == "__future__":
+                if isinstance(stmt.names, cst.ImportStar):
+                    continue
+                for alias in stmt.names:
+                    if isinstance(alias, cst.ImportAlias) and isinstance(alias.name, cst.Name) and alias.name.value == "annotations":
+                        return True
+    return False
+
+
+def module_top_level_names(body: Sequence[cst.CSTNode]) -> dict[str, int]:
+    """Map each name bound at module scope to its body index.
+
+    Covers ``FunctionDef``, ``ClassDef``, ``Import`` / ``ImportFrom`` aliases,
+    ``Assign`` / ``AnnAssign`` targets (simple ``Name`` only), and ``TypeAlias``.
+    """
+    index: dict[str, int] = {}
+    for i, node in enumerate(body):
+        if isinstance(node, (cst.FunctionDef, cst.ClassDef)):
+            index[node.name.value] = i
+        elif isinstance(node, cst.SimpleStatementLine):
+            for stmt in node.body:
+                if isinstance(stmt, cst.Import):
+                    for alias in stmt.names:
+                        name = alias.asname or alias.name
+                        if isinstance(name, cst.Name):
+                            index[name.value] = i
+                elif isinstance(stmt, cst.ImportFrom):
+                    if isinstance(stmt.names, cst.ImportStar):
+                        continue  # ``from x import *`` — can't enumerate names
+                    for alias in stmt.names:  # type: ignore[not-iterable]
+                        name = alias.asname or alias.name
+                        if isinstance(name, cst.Name):
+                            index[name.value] = i
+                elif isinstance(stmt, cst.Assign):
+                    for target in stmt.targets:
+                        if isinstance(target.target, cst.Name):
+                            index[target.target.value] = i
+                elif isinstance(stmt, cst.AnnAssign) and isinstance(stmt.target, cst.Name):
+                    index[stmt.target.value] = i
+        elif isinstance(node, cst.TypeAlias) and isinstance(node.name, cst.Name):
+            index[node.name.value] = i
+    return index
+
+
+def _has_forward_ref(node: cst.CSTNode, ctx: ClassifyContext) -> bool:
+    """True when ``node`` references a name defined in a later section."""
+    names = referenced_names(node)
+    # Remove the node's own primary name (an assignment target is not a forward ref).
+    primary = primary_name(node)
+    if primary:
+        names.discard(primary)
+    return bool(names & ctx.later_section_names)
 
 
 def _is_constant_assignment(node: cst.SimpleStatementLine, cfg) -> bool:  # noqa: ANN001
