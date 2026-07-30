@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`--fail` / `--no-fail` CLI flag and `[cli] fail_on_changed` config**: Control whether
+  `csort run` exits non-zero when files are modified. Default remains exit 1 on change
+  (pre-commit/CI friendly); `--no-fail` (or `[cli] fail_on_changed = false`) exits 0, useful
+  when running csort from a formatter task that always writes. `csort check` is unaffected.
+
 ### Fixed
 
 - **Forward-reference barrier for module-level constants** (issue #1): A
