@@ -14,6 +14,11 @@ Core library code. Config and the Typer CLI also live here (`config.py`, `cli/ap
 - Section order is defined by `Config.sections`; classification lives in `classify.py`.
 - In-section strategy per section via `Config.strategies`: `keep` | `alpha` | `stepdown` | `abstraction`.
 - Unrecognised top-level nodes land in `unknown_section` (default `other`) and act as barriers — never reordered.
+- **Forward-reference barrier**: A module-level constant whose RHS references a name defined in a later
+  section (e.g. ``_DEFAULT_COLOR = Color.RED`` where ``Color`` is an enum) is treated as a barrier —
+  it stays in place rather than being hoisted to ``module_constants``. This prevents ``NameError`` at
+  import time. When ``from __future__ import annotations`` is active, annotation-only names in
+  ``AnnAssign`` are excluded from the check.
 - `undersort.py` (`MethodSorter`) reorders in-class methods; it is this project's own sorter, not an external tool.
   Legacy users may still set `class_methods.order` and `class_methods.method_type_order` under a
   `[tool.undersort]` table (in `pyproject.toml`) or a top-level `[undersort]` table (in standalone
