@@ -109,6 +109,13 @@ RemoveTypeCheckingOpt = Annotated[
         help="Delete if TYPE_CHECKING: guards and hoist their imports to module level.",
     ),
 ]
+NoFailOpt = Annotated[
+    bool | None,
+    typer.Option(
+        "--fail/--no-fail",
+        help="Exit non-zero when files were changed (default: from config, or on; --no-fail exits 0).",
+    ),
+]
 PathsArg = Annotated[
     list[Path] | None,
     typer.Argument(help="Python files or directories to sort. Use '-' for stdin."),
@@ -144,6 +151,11 @@ enums = "alpha"
 enabled = true
 order = ["public", "protected", "private"]
 method_type_order = ["instance", "class", "static"]
+
+[cli]
+# Exit non-zero when `csort run` modifies files (pre-commit/CI friendly).
+# Use --no-fail to override per-invocation (e.g. from a formatter task).
+fail_on_changed = true
 """
 
 
@@ -191,6 +203,7 @@ def _build_config(
     remove_type_checking: bool = False,
     class_methods_order: str | None = None,
     method_type_order: str | None = None,
+    fail: bool | None = None,
 ) -> Config:
     cfg = load_config(explicit=explicit, start=Path.cwd())
     if no_class_methods:
@@ -224,6 +237,8 @@ def _build_config(
         parsed = _parse_permutation(method_type_order, valid=_VALID_MTYPES, flag="--method-type-order")
         if parsed:
             cfg.class_methods_type_order = parsed
+    if fail is not None:
+        cfg.fail_on_changed = fail
     return cfg
 
 
@@ -307,7 +322,9 @@ def _process_files(files: list[Path], cfg: Config, mode: str) -> tuple[int, list
         elif mode == "diff":
             typer.echo(_diff(original, result, str(file)), nl=False)
     code = 0
-    if mode in ("check", "run") and changed:
+    if mode == "check" and changed:
+        code = 1
+    elif mode == "run" and changed and cfg.fail_on_changed:
         code = 1
     if errored:
         code = max(code, 2)
@@ -327,6 +344,7 @@ def _run(
     remove_type_checking: bool = False,
     class_methods_order: str | None = None,
     method_type_order: str | None = None,
+    fail: bool | None = None,
 ) -> None:
     cfg = _build_config(
         config,
@@ -337,6 +355,7 @@ def _run(
         remove_type_checking=remove_type_checking,
         class_methods_order=class_methods_order,
         method_type_order=method_type_order,
+        fail=fail,
     )
     paths = paths or [Path.cwd()]
     if any(p.name == "-" for p in paths):
@@ -367,11 +386,13 @@ def run(
     remove_type_checking: RemoveTypeCheckingOpt = False,
     class_methods_order: ClassMethodsOrderOpt = None,
     method_type_order: MethodTypeOrderOpt = None,
+    fail: NoFailOpt = None,
 ) -> None:
     """Sort Python files in place (or stdin -> stdout with ``-``).
 
     Exits with code 1 if any file was changed (pre-commit / CI friendly),
-    2 on errors. stdin mode always exits 0.
+    2 on errors. stdin mode always exits 0. Use ``--no-fail`` to exit 0
+    even when files changed (e.g. from a formatter task that always writes).
     """
     _run(
         paths,
@@ -386,6 +407,7 @@ def run(
         remove_type_checking=remove_type_checking,
         class_methods_order=class_methods_order,
         method_type_order=method_type_order,
+        fail=fail,
     )
 
 
@@ -477,6 +499,7 @@ def config_show(config: ConfigOpt = None) -> None:
     typer.echo(f"classification.constants_pattern = {cfg.constants_pattern!r}")
     typer.echo(f"transforms.hoist_inline_imports = {cfg.hoist_inline_imports}")
     typer.echo(f"transforms.remove_type_checking = {cfg.remove_type_checking}")
+    typer.echo(f"cli.fail_on_changed = {cfg.fail_on_changed}")
 
 
 def main() -> None:

@@ -101,7 +101,7 @@ constants_pattern = "^[A-Z][A-Z0-9_]*$"
 
 ### Command-line overrides
 
-Four flags let you deviate from the file config without editing it:
+Five flags let you deviate from the file config without editing it:
 
 | Flag                     | Effect                                                                   |
 | ------------------------ | ------------------------------------------------------------------------ |
@@ -109,10 +109,16 @@ Four flags let you deviate from the file config without editing it:
 | `--strategy-overrides`   | Override per-section strategy, e.g. `functions=alpha`.                   |
 | `--class-methods-order`  | Override method visibility order, e.g. `private,public,protected`.       |
 | `--method-type-order`    | Override method-type order, e.g. `static,instance,class`.                |
+| `--fail` / `--no-fail`   | Control whether `csort run` exits non-zero when files change (`run` only). |
 
-The latter two accept a **permutation** of `public`/`protected`/`private` or
+The order/type flags accept a **permutation** of `public`/`protected`/`private` or
 `instance`/`class`/`static` respectively; an invalid permutation warns and
 falls back to the configured order.
+
+`--fail` / `--no-fail` (`csort run` only) controls the exit code when files
+were modified. The default is controlled by `[cli] fail_on_changed` (see
+below); `--no-fail` is useful when running `csort` from a formatter task
+that always writes and should not surface as a failure.
 
 ```shell
 # Only reorder the functions section, using step-down ordering:
@@ -127,6 +133,16 @@ csort run src/ --class-methods-order private,protected,public
 
 These map onto the corresponding `Config` fields and are resolved on top of
 the discovered file config.
+
+### `[cli]` table
+
+```toml
+[cli]
+# Exit non-zero when `csort run` modifies files (default: true).
+# Pre-commit hooks and CI rely on this to detect drift. Override per-invocation
+# with `--no-fail` (useful from formatter tasks that always write).
+fail_on_changed = true
+```
 
 ### Opt-out directives
 

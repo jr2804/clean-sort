@@ -58,6 +58,9 @@ class Config:
             the top of the module (pre-pass before section sorting).
         remove_type_checking: Delete ``if TYPE_CHECKING:`` guards and hoist the
             imports they contained to the top of the module (pre-pass).
+        fail_on_changed: When ``True`` (default), ``csort run`` exits with code 1
+            when any file was modified. Pre-commit/CI friendly. Set to ``False``
+            via ``[cli] fail_on_changed = false`` or ``--no-fail``.
         config_path: Where the config was loaded from (``None`` = pure defaults).
     """
 
@@ -70,6 +73,7 @@ class Config:
     unknown_section: str = "other"
     hoist_inline_imports: bool = False
     remove_type_checking: bool = False
+    fail_on_changed: bool = True
     config_path: Path | None = None
 
     def strategy(self, section: str) -> SectionStrategy:
@@ -126,6 +130,10 @@ class Config:
                 cfg.hoist_inline_imports = bool(transforms["hoist_inline_imports"])
             if "remove_type_checking" in transforms:
                 cfg.remove_type_checking = bool(transforms["remove_type_checking"])
+
+        cli = data.get("cli", {}) or {}
+        if isinstance(cli, dict) and "fail_on_changed" in cli:
+            cfg.fail_on_changed = bool(cli["fail_on_changed"])
 
         return cfg
 

@@ -11,6 +11,10 @@ from clean_sort.cli.app import app
 runner = CliRunner()
 
 
+# ----------------------------------------------------------- --fail/--no-fail
+_UNSORTED = "ZEBRA = 1\nAPPLE = 2\n"
+
+
 def test_version_flag() -> None:
     res = runner.invoke(app, ["--version"])
     assert res.exit_code == 0
@@ -192,3 +196,49 @@ def test_class_methods_order_invalid_is_ignored(tmp_path: Path, monkeypatch) -> 
     )
     assert res.exit_code == 0
     assert res.output.index("def pub") < res.output.index("def _prot")
+
+
+def test_run_exits_1_by_default_when_changed(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text('[strategy]\nmodule_constants = "alpha"\n', encoding="utf-8")
+    target = tmp_path / "m.py"
+    target.write_text(_UNSORTED, encoding="utf-8")
+
+    res = runner.invoke(app, ["run", str(target)])
+    assert res.exit_code == 1
+
+
+def test_run_no_fail_exits_0_when_changed(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text('[strategy]\nmodule_constants = "alpha"\n', encoding="utf-8")
+    target = tmp_path / "m.py"
+    target.write_text(_UNSORTED, encoding="utf-8")
+
+    res = runner.invoke(app, ["run", str(target), "--no-fail"])
+    assert res.exit_code == 0
+
+
+def test_run_config_fail_on_changed_false(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text(
+        '[cli]\nfail_on_changed = false\n[strategy]\nmodule_constants = "alpha"\n',
+        encoding="utf-8",
+    )
+    target = tmp_path / "m.py"
+    target.write_text(_UNSORTED, encoding="utf-8")
+
+    res = runner.invoke(app, ["run", str(target)])
+    assert res.exit_code == 0
+
+
+def test_run_cli_fail_overrides_config_false(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text(
+        '[cli]\nfail_on_changed = false\n[strategy]\nmodule_constants = "alpha"\n',
+        encoding="utf-8",
+    )
+    target = tmp_path / "m.py"
+    target.write_text(_UNSORTED, encoding="utf-8")
+
+    res = runner.invoke(app, ["run", str(target), "--fail"])
+    assert res.exit_code == 1
