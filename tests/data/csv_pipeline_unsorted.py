@@ -64,7 +64,7 @@ class ValidationError(Exception):
 # ``_VALIDATORS`` and the ``register_validator`` calls below form a *barrier
 # group*: csort will not reorder ``_VALIDATORS`` past the calls that populate
 # it, because the calls depend on it at import time.
-_VALIDATORS: dict = {}
+_VALIDATORS: dict[str, Callable[[str], ValidationIssue | None]] = {}
 
 
 def register_validator(

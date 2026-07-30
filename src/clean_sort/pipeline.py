@@ -8,7 +8,7 @@ from __future__ import annotations
 import libcst as cst
 
 from . import transforms, undersort
-from .classify import ClassifyContext, classify, is_future_import, is_module_docstring, module_top_level_names
+from .classify import ClassifyContext, classify, has_future_annotations, is_future_import, is_module_docstring, module_top_level_names
 from .config import Config
 from .sorters import alpha, dependency
 
@@ -71,10 +71,18 @@ class SectionSorter(cst.CSTTransformer):
             and mc_pos >= 0
             and self.cfg.sections.index(sec) > mc_pos
         }
+        # When ``from __future__ import annotations`` is active, annotation-only
+        # names in ``AnnAssign`` are not evaluated at runtime and must be
+        # excluded from the forward-reference check.
+        exclude_annotations = has_future_annotations(original_node)
+
         new_rest: list[cst.CSTNode] = []
         current: list[tuple[str, cst.CSTNode]] = []
         for node in remainder:
-            ctx = ClassifyContext(later_section_names=later_section_names)
+            ctx = ClassifyContext(
+                later_section_names=later_section_names,
+                exclude_annotation_names=exclude_annotations,
+            )
             section = classify(node, self.cfg, ctx=ctx)
             if section in self._reorder_sections:
                 current.append((section, node))
