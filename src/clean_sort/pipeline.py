@@ -8,7 +8,7 @@ from __future__ import annotations
 import libcst as cst
 
 from . import transforms, undersort
-from .classify import classify, is_future_import, is_module_docstring
+from .classify import ClassifyContext, classify, is_future_import, is_module_docstring, module_top_level_names
 from .config import Config
 from .sorters import alpha, dependency
 
@@ -53,10 +53,29 @@ class SectionSorter(cst.CSTTransformer):
                 remainder.append(node)
         pinned.extend(futures)
 
+        # Build a name-to-index map for forward-reference detection.
+        module_index = module_top_level_names(body)
+        # Classify each indexed node to determine its section, then collect
+        # names whose section comes after ``module_constants``.
+        name_section: dict[str, str] = {}
+        for name, idx in module_index.items():
+            name_section[name] = classify(body[idx], self.cfg)
+        try:
+            mc_pos = self.cfg.sections.index("module_constants")
+        except ValueError:
+            mc_pos = -1  # module_constants not configured; no barrier needed
+        later_section_names = {
+            name
+            for name, sec in name_section.items()
+            if sec in self._reorder_sections
+            and mc_pos >= 0
+            and self.cfg.sections.index(sec) > mc_pos
+        }
         new_rest: list[cst.CSTNode] = []
         current: list[tuple[str, cst.CSTNode]] = []
         for node in remainder:
-            section = classify(node, self.cfg)
+            ctx = ClassifyContext(later_section_names=later_section_names)
+            section = classify(node, self.cfg, ctx=ctx)
             if section in self._reorder_sections:
                 current.append((section, node))
             else:

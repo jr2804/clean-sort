@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import textwrap
+
 import libcst as cst
 
 from clean_sort import Config, sort_source, would_change
@@ -208,3 +210,92 @@ def test_strategy_override_reorders_previously_kept() -> None:
     assert kept.index("def b") < kept.index("def a")
     overridden = sort_source(src, Config(strategies={"functions": "alpha"}))
     assert overridden.index("def a") < overridden.index("def b")
+
+
+# --------------------------------------------- forward-reference barriers
+# A module-level constant whose RHS references a name defined in a later
+# section must be treated as a barrier (left in place) to prevent NameError.
+
+
+def test_constant_referencing_enum_stays_in_place() -> None:
+    # Case 1 from issue #1: _DEFAULT_COLOR = Color.RED must stay after Color.
+    src = textwrap.dedent("""\
+        from enum import StrEnum
+        class Color(StrEnum):
+            RED = "red"
+        _DEFAULT_COLOR = Color.RED
+    """)
+    out = sort_source(src, Config())
+    assert out.index("class Color") < out.index("_DEFAULT_COLOR")
+
+
+def test_constant_referencing_class_stays_in_place() -> None:
+    # _ASSET_PREFIX = {AssetKind.TABLE: ...} must stay after AssetKind.
+    src = textwrap.dedent("""\
+        from enum import StrEnum
+        class AssetKind(StrEnum):
+            TABLE = "table"
+        _ASSET_PREFIX = {AssetKind.TABLE: "prefix"}
+    """)
+    out = sort_source(src, Config())
+    assert out.index("class AssetKind") < out.index("_ASSET_PREFIX")
+
+
+def test_constant_referencing_function_stays_in_place() -> None:
+    # _REGISTRY = {"a": _helper_a} must stay after _helper_a.
+    src = textwrap.dedent("""\
+        def _helper_a():
+            pass
+        _REGISTRY = {"a": _helper_a}
+    """)
+    out = sort_source(src, Config(strategies={"functions": "stepdown"}))
+    assert out.index("def _helper_a") < out.index("_REGISTRY")
+
+
+def test_constant_referencing_imported_name_moves_normally() -> None:
+    # _OS_PATH = os.path must still be classified as module_constants
+    # (no false positive — os is imported, not forward-defined).
+    src = textwrap.dedent("""\
+        import os
+        _OS_PATH = os.path
+    """)
+    out = sort_source(src, Config())
+    # _OS_PATH stays in module_constants (after imports), not a barrier.
+    assert "_OS_PATH" in out
+    assert "import os" in out
+
+
+def test_constant_referencing_builtin_moves_normally() -> None:
+    # _MAX = max(1, 2) must still hoist (no false positive).
+    src = "_MAX = max(1, 2)\n"
+    out = sort_source(src, Config())
+    assert "_MAX" in out
+
+
+def test_safe_constants_still_group() -> None:
+    # Unrelated constants still group into module_constants and reorder
+    # within the section (alpha order when configured).
+    src = textwrap.dedent("""\
+        def f():
+            pass
+        _B = 2
+        _A = 1
+    """)
+    out = sort_source(src, Config(strategies={"module_constants": "alpha"}))
+    assert out.index("_A") < out.index("_B")
+    assert out.index("_B") < out.index("def f")
+
+
+def test_forward_reference_barrier_is_idempotent() -> None:
+    # Re-sorting the fixed output changes nothing.
+    src = textwrap.dedent("""\
+        from enum import StrEnum
+        class Color(StrEnum):
+            RED = "red"
+        _DEFAULT_COLOR = Color.RED
+    """)
+    once = sort_source(src, Config())
+    twice = sort_source(once, Config())
+    assert once == twice
+
+
