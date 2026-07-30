@@ -242,3 +242,80 @@ def test_run_cli_fail_overrides_config_false(tmp_path: Path, monkeypatch) -> Non
 
     res = runner.invoke(app, ["run", str(target), "--fail"])
     assert res.exit_code == 1
+
+
+# --------------------------------------------------------- discovery config+CLI
+
+
+def test_run_config_exclude_applies(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text(
+        '[discovery]\nexclude = ["skip.py"]\n[strategy]\nmodule_constants = "alpha"\n',
+        encoding="utf-8",
+    )
+    keep = tmp_path / "keep.py"
+    skip = tmp_path / "skip.py"
+    keep.write_text("ZEBRA = 1\nAPPLE = 2\n", encoding="utf-8")
+    skip.write_text("ZEBRA = 1\nAPPLE = 2\n", encoding="utf-8")
+
+    res = runner.invoke(app, ["run", str(tmp_path), "--no-fail"])
+    assert res.exit_code == 0
+    assert "keep.py" in res.output
+    assert "skip.py" not in res.output
+
+
+def test_run_cli_exclude_merges_with_config(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text(
+        '[discovery]\nexclude = ["skip.py"]\n[strategy]\nmodule_constants = "alpha"\n',
+        encoding="utf-8",
+    )
+    a = tmp_path / "a.py"
+    b = tmp_path / "b.py"
+    skip = tmp_path / "skip.py"
+    for f in (a, b, skip):
+        f.write_text("ZEBRA = 1\nAPPLE = 2\n", encoding="utf-8")
+
+    res = runner.invoke(app, ["run", str(tmp_path), "-x", "b.py", "--no-fail"])
+    assert res.exit_code == 0
+    assert "a.py" in res.output
+    assert "b.py" not in res.output
+    assert "skip.py" not in res.output
+
+
+def test_run_config_recursive_false(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text(
+        '[discovery]\nrecursive = false\n[strategy]\nmodule_constants = "alpha"\n',
+        encoding="utf-8",
+    )
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    top = tmp_path / "top.py"
+    nested = sub / "nested.py"
+    top.write_text("ZEBRA = 1\nAPPLE = 2\n", encoding="utf-8")
+    nested.write_text("ZEBRA = 1\nAPPLE = 2\n", encoding="utf-8")
+
+    res = runner.invoke(app, ["run", str(tmp_path), "--no-fail"])
+    assert res.exit_code == 0
+    assert "top.py" in res.output
+    assert "nested.py" not in res.output
+
+
+def test_run_no_recursive_overrides_config_true(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text(
+        '[discovery]\nrecursive = true\n[strategy]\nmodule_constants = "alpha"\n',
+        encoding="utf-8",
+    )
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    top = tmp_path / "top.py"
+    nested = sub / "nested.py"
+    top.write_text("ZEBRA = 1\nAPPLE = 2\n", encoding="utf-8")
+    nested.write_text("ZEBRA = 1\nAPPLE = 2\n", encoding="utf-8")
+
+    res = runner.invoke(app, ["run", str(tmp_path), "--no-recursive", "--no-fail"])
+    assert res.exit_code == 0
+    assert "top.py" in res.output
+    assert "nested.py" not in res.output

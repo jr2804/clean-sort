@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **`[discovery]` config table**: Persistent file-discovery options previously
+  only available as CLI flags. `exclude` (glob list, merged with `--exclude`
+  flags) and `recursive` (bool, default `true`; `--no-recursive` overrides).
+
 - **`--fail` / `--no-fail` CLI flag and `[cli] fail_on_changed` config**: Control whether
   `csort run` exits non-zero when files are modified. Default remains exit 1 on change
   (pre-commit/CI friendly); `--no-fail` (or `[cli] fail_on_changed = false`) exits 0, useful

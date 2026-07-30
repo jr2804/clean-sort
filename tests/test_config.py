@@ -169,3 +169,49 @@ def test_legacy_invalid_order_warns(tmp_path: Path) -> None:
         cfg = load_config(explicit=pyproject)
     assert cfg.class_methods_order == ["public", "protected", "private"]  # default
     assert any("invalid class_methods_order" in str(w.message) for w in caught)
+
+
+# ------------------------------------------------------------- [discovery] table
+
+
+def test_discovery_exclude_and_recursive(tmp_path: Path) -> None:
+    cfg_file = tmp_path / "csort.toml"
+    cfg_file.write_text(
+        textwrap.dedent(
+            """\
+            [discovery]
+            exclude = ["vendor/**", "**/_generated.py"]
+            recursive = false
+            """
+        ),
+        encoding="utf-8",
+    )
+    cfg = load_config(explicit=cfg_file)
+    assert cfg.exclude == ["vendor/**", "**/_generated.py"]
+    assert cfg.recursive is False
+
+
+def test_discovery_defaults_when_absent(tmp_path: Path) -> None:
+    cfg_file = tmp_path / "csort.toml"
+    cfg_file.write_text('[strategy]\nfunctions = "alpha"\n', encoding="utf-8")
+    cfg = load_config(explicit=cfg_file)
+    assert cfg.exclude == []
+    assert cfg.recursive is True
+
+
+def test_discovery_invalid_exclude_warns(tmp_path: Path) -> None:
+    cfg_file = tmp_path / "csort.toml"
+    cfg_file.write_text(
+        textwrap.dedent(
+            """\
+            [discovery]
+            exclude = "not-a-list"
+            """
+        ),
+        encoding="utf-8",
+    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        cfg = load_config(explicit=cfg_file)
+    assert cfg.exclude == []  # falls back to default
+    assert any("discovery.exclude must be a list" in str(w.message) for w in caught)

@@ -61,6 +61,10 @@ class Config:
         fail_on_changed: When ``True`` (default), ``csort run`` exits with code 1
             when any file was modified. Pre-commit/CI friendly. Set to ``False``
             via ``[cli] fail_on_changed = false`` or ``--no-fail``.
+        exclude: Glob patterns to exclude during file discovery (merged with
+            ``--exclude`` flags).
+        recursive: Whether file discovery descends into subdirectories
+            (default ``True``). ``--no-recursive`` overrides per-invocation.
         config_path: Where the config was loaded from (``None`` = pure defaults).
     """
 
@@ -74,6 +78,8 @@ class Config:
     hoist_inline_imports: bool = False
     remove_type_checking: bool = False
     fail_on_changed: bool = True
+    exclude: list[str] = field(default_factory=list)
+    recursive: bool = True
     config_path: Path | None = None
 
     def strategy(self, section: str) -> SectionStrategy:
@@ -134,6 +140,20 @@ class Config:
         cli = data.get("cli", {}) or {}
         if isinstance(cli, dict) and "fail_on_changed" in cli:
             cfg.fail_on_changed = bool(cli["fail_on_changed"])
+
+        discovery = data.get("discovery", {}) or {}
+        if isinstance(discovery, dict):
+            if "exclude" in discovery:
+                exclude = discovery["exclude"]
+                if isinstance(exclude, list) and all(isinstance(p, str) for p in exclude):
+                    cfg.exclude = [str(p) for p in exclude]
+                else:
+                    warnings.warn(
+                        "csort: discovery.exclude must be a list of strings; ignoring",
+                        stacklevel=2,
+                    )
+            if "recursive" in discovery:
+                cfg.recursive = bool(discovery["recursive"])
 
         return cfg
 

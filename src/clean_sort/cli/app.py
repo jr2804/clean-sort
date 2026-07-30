@@ -156,6 +156,12 @@ method_type_order = ["instance", "class", "static"]
 # Exit non-zero when `csort run` modifies files (pre-commit/CI friendly).
 # Use --no-fail to override per-invocation (e.g. from a formatter task).
 fail_on_changed = true
+
+[discovery]
+# Glob patterns to exclude from file discovery (merged with --exclude flags).
+# exclude = ["vendor/**", "**/_generated.py"]
+# Whether to descend into subdirectories (default true; --no-recursive overrides).
+recursive = true
 """
 
 
@@ -360,7 +366,9 @@ def _run(
     paths = paths or [Path.cwd()]
     if any(p.name == "-" for p in paths):
         raise typer.Exit(_process_stdin(cfg, mode))
-    files = _collect(paths, recursive=not no_recursive, excludes=exclude)
+    effective_excludes = [*cfg.exclude, *(exclude or [])]
+    effective_recursive = cfg.recursive and not no_recursive
+    files = _collect(paths, recursive=effective_recursive, excludes=effective_excludes)
     if not files:
         typer.echo("csort: no Python files found")
         raise typer.Exit(0)
@@ -500,6 +508,8 @@ def config_show(config: ConfigOpt = None) -> None:
     typer.echo(f"transforms.hoist_inline_imports = {cfg.hoist_inline_imports}")
     typer.echo(f"transforms.remove_type_checking = {cfg.remove_type_checking}")
     typer.echo(f"cli.fail_on_changed = {cfg.fail_on_changed}")
+    typer.echo(f"discovery.exclude = {cfg.exclude}")
+    typer.echo(f"discovery.recursive = {cfg.recursive}")
 
 
 def main() -> None:
