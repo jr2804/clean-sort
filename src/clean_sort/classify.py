@@ -15,6 +15,7 @@ import libcst as cst
 __all__ = [
     "ClassifyContext",
     "classify",
+    "has_future_annotations",
     "is_future_import",
     "is_module_docstring",
     "module_top_level_names",
@@ -34,9 +35,13 @@ class ClassifyContext:
             ``module_constants`` in the configured section order. A constant
             whose RHS references any of these is treated as a barrier,
             preventing ``NameError`` at import time.
+        exclude_annotation_names: When true, names that appear only in
+            ``AnnAssign`` annotations are excluded from the forward-reference
+            check (safe when ``from __future__ import annotations`` is active).
     """
 
     later_section_names: set[str]
+    exclude_annotation_names: bool = False
 
 
 def is_module_docstring(node: cst.CSTNode) -> bool:
@@ -180,6 +185,13 @@ def _has_forward_ref(node: cst.CSTNode, ctx: ClassifyContext) -> bool:
     primary = primary_name(node)
     if primary:
         names.discard(primary)
+    # When ``from __future__ import annotations`` is active, annotation-only
+    # names in ``AnnAssign`` are not evaluated at runtime and must be excluded.
+    if ctx.exclude_annotation_names and isinstance(node, cst.SimpleStatementLine):
+        for stmt in node.body:
+            if isinstance(stmt, cst.AnnAssign) and stmt.annotation is not None:
+                annotation_names = referenced_names(stmt.annotation)
+                names -= annotation_names
     return bool(names & ctx.later_section_names)
 
 

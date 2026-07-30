@@ -50,3 +50,6 @@ CLAUDE.md
 
 # documentation
 site/
+# Temp files from investigation / debugging
+cb_*.json
+ruff_*.txt

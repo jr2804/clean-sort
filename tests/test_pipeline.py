@@ -286,6 +286,21 @@ def test_safe_constants_still_group() -> None:
     assert out.index("_B") < out.index("def f")
 
 
+def test_annotation_only_ref_with_future_annotations_not_barrier() -> None:
+    # With ``from __future__ import annotations``, annotation-only references
+    # are not evaluated at runtime and must not trigger the barrier.
+    src = textwrap.dedent("""\
+        from __future__ import annotations
+        from typing import Callable
+        class Later:
+            pass
+        _REG: Callable[[Later], None] = lambda x: None
+    """)
+    out = sort_source(src, Config())
+    # _REG should be in module_constants (before Later), not a barrier.
+    assert out.index("_REG") < out.index("class Later")
+
+
 def test_forward_reference_barrier_is_idempotent() -> None:
     # Re-sorting the fixed output changes nothing.
     src = textwrap.dedent("""\
