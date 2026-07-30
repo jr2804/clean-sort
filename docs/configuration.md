@@ -144,6 +144,23 @@ the discovered file config.
 fail_on_changed = true
 ```
 
+### `[discovery]` table
+
+Controls which files `csort` scans when given a directory.
+
+```toml
+[discovery]
+# Glob patterns to exclude (merged with --exclude flags on the command line).
+exclude = ["vendor/**", "**/_generated.py"]
+# Whether to descend into subdirectories (default: true).
+# --no-recursive overrides this per-invocation.
+recursive = true
+```
+
+`exclude` patterns are matched with :mod:`fnmatch` against both the full path
+and the file name; patterns from the config are combined with any `--exclude`
+flags (CLI patterns append, they do not replace).
+
 ### Opt-out directives
 
 - **Whole file:** a `# csort: off` (or `# nosort`) comment anywhere in the

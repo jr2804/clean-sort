@@ -31,6 +31,9 @@ Core library code. Config and the Typer CLI also live here (`config.py`, `cli/ap
   by `Config.fail_on_changed` (default `True`), configurable via `[cli] fail_on_changed` and
   overridable per-invocation with `--fail` / `--no-fail`. `csort check` is unaffected and always
   exits 1 when files would change.
+- File discovery is governed by `Config.exclude` (glob list) and `Config.recursive` (bool, default `True`),
+  configurable via `[discovery]`. CLI `--exclude` patterns merge with (append to) the config list;
+  `--no-recursive` overrides `recursive=true` per-invocation.
 
 ## Work Guidance
 
