@@ -340,3 +340,178 @@ def load(
 
 
 SectionStrategy = Literal["keep", "alpha", "stepdown", "abstraction"]
+
+
+@dataclass(frozen=True)
+class ConfigKey:
+    """One recognized ``[section].key`` config option."""
+
+    section: str
+    key: str
+    default: Any
+    comment: str
+    #: When True, the key is emitted as ``# key = ...`` in the default template
+    #: (i.e. commented out) unless an override is provided.
+    commented_out: bool = False
+
+
+#: The canonical schema, ordered by section then key. `generate_config()` walks
+#: this list to render the template; `--with-config` validates against it.
+CONFIG_SCHEMA: list[ConfigKey] = [
+    ConfigKey(
+        "module", "sections", list(DEFAULT_SECTIONS),
+        "Ordered list of section buckets; top-level statements are grouped into these.",
+    ),
+    ConfigKey(
+        "strategy", "enums", "alpha",
+        "Per-section in-section strategy: keep | alpha | stepdown | abstraction.",
+    ),
+    ConfigKey(
+        "strategy", "functions", "stepdown",
+        "Strategy for the functions section (stepdown/abstraction only affect functions/classes).",
+        commented_out=True,
+    ),
+    ConfigKey(
+        "strategy", "classes", "keep",
+        "Strategy for the classes section.",
+        commented_out=True,
+    ),
+    ConfigKey(
+        "class_methods", "enabled", True,
+        "Reorder methods within each class (undersort).",
+    ),
+    ConfigKey(
+        "class_methods", "order", ["public", "protected", "private"],
+        "Method visibility ordering.",
+    ),
+    ConfigKey(
+        "class_methods", "method_type_order", ["instance", "class", "static"],
+        "Method-type ordering within each visibility bucket.",
+    ),
+    ConfigKey(
+        "classification", "constants_pattern", r"^[A-Z_][A-Z0-9_]*$",
+        "Regex for the module_constants classification.",
+        commented_out=True,
+    ),
+    ConfigKey(
+        "transforms", "hoist_inline_imports", False,
+        "Move imports nested inside function/class bodies to the top of the module.",
+        commented_out=True,
+    ),
+    ConfigKey(
+        "transforms", "remove_type_checking", False,
+        "Delete if TYPE_CHECKING: guards and hoist the imports they contained.",
+        commented_out=True,
+    ),
+    ConfigKey(
+        "cli", "fail_on_changed", True,
+        "Exit non-zero when csort run modifies files (pre-commit/CI friendly).",
+    ),
+    ConfigKey(
+        "cli", "cache", True,
+        "Content-hash skip cache: avoids re-parsing already-sorted files.",
+        commented_out=True,
+    ),
+    ConfigKey(
+        "cli", "cache_dir", ".csort-cache",
+        "Cache directory (default: ~/.cache/csort/<project-slug>/cache.json).",
+        commented_out=True,
+    ),
+    ConfigKey(
+        "cli", "jobs", 0,
+        "Parallel workers: 0 = serial, negative = auto (int(0.75*cpu_count())).",
+        commented_out=True,
+    ),
+    ConfigKey(
+        "cli", "parallel_backend", "process",
+        "Parallel backend: 'process' (multiprocessing) or 'thread' (threading).",
+        commented_out=True,
+    ),
+    ConfigKey(
+        "discovery", "exclude", [],
+        "Glob patterns to exclude during file discovery (merged with --exclude flags).",
+        commented_out=True,
+    ),
+    ConfigKey(
+        "discovery", "recursive", True,
+        "Whether file discovery descends into subdirectories (--no-recursive overrides).",
+    ),
+]
+
+
+# ---------------------------------------------------------------------- schema
+# The config schema is the single source of truth for the set of recognized
+# config keys, their defaults, and their documentation. It drives the
+# `generate_config()` template builder (used by `csort config generate`) and
+# the validation/drop logic for `--with-config` merges.
+
+
+def _format_toml_value(value: Any) -> str:
+    """Render a Python value as its TOML literal."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, str):
+        # TOML basic string (double quotes). Escape backslashes and quotes.
+        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+    if isinstance(value, list):
+        return "[" + ", ".join(_format_toml_value(v) for v in value) + "]"
+    return str(value)
+
+
+def generate_config(
+    *,
+    overrides: dict[str, dict[str, Any]] | None = None,
+    with_comments: bool = False,
+) -> str:
+    """Render a csort TOML config string from :data:`CONFIG_SCHEMA`.
+
+    Args:
+        overrides: Section-keyed dict of overrides (e.g. from ``--with-config``).
+            Keys absent from ``overrides`` use the schema default.
+        with_comments: When True, emit the explanatory comment line above each key.
+    """
+    overrides = overrides or {}
+    lines: list[str] = ["# clean-sort configuration. See https://codeberg.org/jr2804/clean-sort", ""]
+    current_section: str | None = None
+    for key in CONFIG_SCHEMA:
+        if key.section != current_section:
+            if current_section is not None:
+                lines.append("")
+            lines.append(f"[{key.section}]")
+            current_section = key.section
+        # Resolve value: override wins over default
+        section_overrides = overrides.get(key.section, {})
+        has_override = key.key in section_overrides
+        value = section_overrides[key.key] if has_override else key.default
+        # commented_out unless overridden
+        commented = key.commented_out and not has_override
+        prefix = "# " if commented else ""
+        if with_comments and key.comment:
+            lines.append(f"# {key.comment}")
+        lines.append(f"{prefix}{key.key} = {_format_toml_value(value)}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def validate_config_keys(data: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    """Split a parsed csort TOML table into (recognized, invalid_paths).
+
+    Used by ``--with-config`` to drop unknown/deprecated keys with warnings.
+    Returns a dict of section-keyed recognized overrides and a list of
+    ``"[section].key"`` strings for keys not in :data:`CONFIG_SCHEMA`.
+    """
+    valid: dict[tuple[str, str], ConfigKey] = {(k.section, k.key): k for k in CONFIG_SCHEMA}
+    recognized: dict[str, dict[str, Any]] = {}
+    invalid: list[str] = []
+    for section_name, section_value in data.items():
+        if not isinstance(section_value, dict):
+            # Unknown top-level scalar/string — treat as invalid
+            invalid.append(f"[{section_name}]")
+            continue
+        for key_name, value in section_value.items():
+            if (section_name, key_name) in valid:
+                recognized.setdefault(section_name, {})[key_name] = value
+            else:
+                invalid.append(f"[{section_name}].{key_name}")
+    return recognized, invalid

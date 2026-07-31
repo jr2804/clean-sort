@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **`csort config generate` subcommand**: produces a csort.toml template from
+  the current config schema. Supports `--output FILE` (must end in `.toml`),
+  `--with-comments` (explanatory comments for each setting), and `--with-config
+  FILE` (merges recognized values from an existing config; invalid/deprecated
+  keys are dropped with warnings). The schema is now the single source of truth
+  for recognized config keys. Replaces the old `csort config init`.
 
 - **Content-hash skip cache**: csort now caches sorted-output hashes keyed by
   ``(config_signature, source_hash)``. On repeat runs, files whose content hash

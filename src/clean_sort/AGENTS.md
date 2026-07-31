@@ -43,6 +43,11 @@ Core library code. Config and the Typer CLI also live here (`config.py`, `cli/ap
   (``parallel_backend = "process"``, default) or thread pool (``"thread"``).
   Configure via ``[cli] jobs`` (0 = serial, negative = auto ``int(0.75*cpu_count())``)
   or ``--jobs``/``-j`` per-invocation. Stdin mode always runs serially.
+- **Config schema as source of truth**: ``CONFIG_SCHEMA`` in ``config.py`` drives
+  ``csort config generate`` (the template builder) and validates ``--with-config``
+  merges. ``CONFIG_SCHEMA`` is the canonical list of recognized ``[section].key``
+  paths; unknown keys are reported as invalid and dropped. The old
+  ``csort config init`` is removed — ``generate`` replaces it.
 
 ## Work Guidance
 

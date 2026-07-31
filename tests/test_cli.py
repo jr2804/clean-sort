@@ -64,14 +64,87 @@ def test_diff_shows_changes(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN00
     assert "-def a" in res.output
 
 
-def test_config_init(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+def test_config_generate_default(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    res = runner.invoke(app, ["config", "init"])
+    res = runner.invoke(app, ["config", "generate"])
     assert res.exit_code == 0
-    assert (tmp_path / "csort.toml").exists()
+    assert "[module]" in res.output
+    assert "[strategy]" in res.output
+    assert "[class_methods]" in res.output
 
-    res2 = runner.invoke(app, ["config", "init"])
-    assert res2.exit_code == 1  # already exists
+
+def test_config_generate_output(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    out_file = tmp_path / "csort.toml"
+    res = runner.invoke(app, ["config", "generate", "--output", str(out_file)])
+    assert res.exit_code == 0
+    assert out_file.exists()
+    assert "[module]" in out_file.read_text(encoding="utf-8")
+
+
+def test_config_generate_output_enforces_toml(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    out_file = tmp_path / "csort.txt"
+    res = runner.invoke(app, ["config", "generate", "--output", str(out_file)])
+    assert res.exit_code == 2  # bad extension
+    assert not out_file.exists()
+
+
+def test_config_generate_output_exists_no_force(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    out_file = tmp_path / "csort.toml"
+    out_file.write_text("existing", encoding="utf-8")
+    res = runner.invoke(app, ["config", "generate", "--output", str(out_file)])
+    assert res.exit_code == 1  # already exists
+
+
+def test_config_generate_output_force(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    out_file = tmp_path / "csort.toml"
+    out_file.write_text("existing", encoding="utf-8")
+    res = runner.invoke(app, ["config", "generate", "--output", str(out_file), "--force"])
+    assert res.exit_code == 0
+    assert "[module]" in out_file.read_text(encoding="utf-8")
+
+
+def test_config_generate_with_comments(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    res = runner.invoke(app, ["config", "generate", "--with-comments"])
+    assert res.exit_code == 0
+    # Comments should explain at least one recognized key
+    assert "# Ordered list of section buckets" in res.output
+
+
+def test_config_generate_with_config_merge(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    existing = tmp_path / "existing.toml"
+    existing.write_text(
+        '[strategy]\nenums = "keep"\nbogus = true\n[cli]\njobs = 8\n',
+        encoding="utf-8",
+    )
+    res = runner.invoke(app, ["config", "generate", "--with-config", str(existing)])
+    assert res.exit_code == 0
+    # Override carried forward
+    assert 'enums = "keep"' in res.output
+    assert "jobs = 8" in res.output  # jobs was commented_out but override activates it
+
+
+def test_config_generate_with_config_invalid_dropped(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    existing = tmp_path / "existing.toml"
+    existing.write_text(
+        '[strategy]\nbogus_key = true\n[old_section]\nfoo = 42\n',
+        encoding="utf-8",
+    )
+    res = runner.invoke(app, ["config", "generate", "--with-config", str(existing)])
+    assert res.exit_code == 0
+    stderr = res.stderr_bytes.decode("utf-8", errors="replace")
+    assert "[strategy].bogus_key" in stderr
+    assert "[old_section].foo" in stderr
+    # Invalid keys must not appear in generated output (only in warnings)
+    stdout = res.stdout_bytes.decode("utf-8", errors="replace")
+    assert "bogus_key" not in stdout
+    assert "old_section" not in stdout
 
 
 def test_config_show(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
