@@ -85,6 +85,13 @@ class Cache:
         tmp.replace(self._path)
         self._dirty = False
 
+    def merge(self, entries: dict[str, str]) -> None:
+        """Merge external cache entries (e.g. from parallel workers) into this cache."""
+        for key, value in entries.items():
+            if self._entries.get(key) != value:
+                self._entries[key] = value
+                self._dirty = True
+
 
 def hash_text(text: str) -> str:
     """Stable hex digest of a string (used for both source and sorted output)."""
