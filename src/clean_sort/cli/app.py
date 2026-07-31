@@ -14,12 +14,14 @@ import difflib
 import fnmatch
 import sys
 import warnings
+from hashlib import sha256
 from pathlib import Path
 from typing import Annotated, cast
 
 import typer
 
 from clean_sort import VALID_STRATEGIES, Config, __version__, load_config, sort_source
+from clean_sort.cache import Cache, hash_text
 from clean_sort.config import _VALID_MTYPES, _VALID_VIS, SectionStrategy
 
 # `app`/`config_app` are runtime setup used by the decorators below; csort treats
@@ -116,6 +118,13 @@ NoFailOpt = Annotated[
         help="Exit non-zero when files were changed (default: from config, or on; --no-fail exits 0).",
     ),
 ]
+NoCacheOpt = Annotated[
+    bool,
+    typer.Option(
+        "--no-cache",
+        help="Disable the content-hash skip cache (forces full sort on every file).",
+    ),
+]
 PathsArg = Annotated[
     list[Path] | None,
     typer.Argument(help="Python files or directories to sort. Use '-' for stdin."),
@@ -156,6 +165,11 @@ method_type_order = ["instance", "class", "static"]
 # Exit non-zero when `csort run` modifies files (pre-commit/CI friendly).
 # Use --no-fail to override per-invocation (e.g. from a formatter task).
 fail_on_changed = true
+
+# Content-hash skip cache: avoids re-parsing already-sorted files.
+# Default: on, stored in ~/.cache/csort/<project-slug>/cache.json
+# cache = true
+# cache_dir = ".csort-cache"  # override location (relative to cwd or absolute)
 
 [discovery]
 # Glob patterns to exclude from file discovery (merged with --exclude flags).
@@ -301,7 +315,33 @@ def _process_stdin(cfg: Config, mode: str) -> int:
     return 0
 
 
-def _process_files(files: list[Path], cfg: Config, mode: str) -> tuple[int, list[Path]]:
+def _resolve_cache_dir(cfg: Config, *, use_cache: bool) -> Path | None:
+    """Resolve the cache directory, or ``None`` when caching is disabled.
+
+    Priority:
+    1. Explicitly disabled (``use_cache=False`` or ``cfg.cache_enabled=False``) → None.
+    2. ``cfg.cache_dir`` if set (config or CLI override).
+    3. ``~/.cache/csort/<slug>`` where slug is derived from the config file's
+       absolute parent directory (stable across runs, collision-resistant).
+    """
+    if not use_cache or not cfg.cache_enabled:
+        return None
+    if cfg.cache_dir is not None:
+        return cfg.cache_dir
+    # Derive a stable project slug from the config's location.
+    base = cfg.config_path.resolve().parent if cfg.config_path else Path.cwd()
+    slug = sha256(str(base.resolve()).encode("utf-8")).hexdigest()[:12]
+    return Path.home() / ".cache" / "csort" / slug
+
+
+def _process_files(
+    files: list[Path],
+    cfg: Config,
+    mode: str,
+    *,
+    cache: Cache | None = None,
+) -> tuple[int, list[Path]]:
+    config_sig = cfg.config_signature() if cache is not None else None
     changed: list[Path] = []
     errored = False
     for file in files:
@@ -311,12 +351,22 @@ def _process_files(files: list[Path], cfg: Config, mode: str) -> tuple[int, list
             typer.echo(f"csort: cannot read {file}: {exc}", err=True)
             errored = True
             continue
+        # Cache lookup: skip the file if its current content matches the
+        # cached sorted-output hash. Only applies to run/check; diff always
+        # computes to show the delta.
+        if cache is not None and config_sig is not None and mode in ("run", "check"):
+            source_hash = hash_text(original)
+            if cache.lookup(config_sig, source_hash, source_hash):
+                continue
         try:
             result = sort_source(original, cfg, filename=str(file))
         except Exception as exc:  # noqa: BLE001
             typer.echo(f"csort: error in {file}: {exc}", err=True)
             errored = True
             continue
+        if cache is not None and config_sig is not None and mode in ("run", "check"):
+            source_hash = hash_text(original)
+            cache.record(config_sig, source_hash, hash_text(result if result != original else original))
         if result == original:
             continue
         changed.append(file)
@@ -328,9 +378,7 @@ def _process_files(files: list[Path], cfg: Config, mode: str) -> tuple[int, list
         elif mode == "diff":
             typer.echo(_diff(original, result, str(file)), nl=False)
     code = 0
-    if mode == "check" and changed:
-        code = 1
-    elif mode == "run" and changed and cfg.fail_on_changed:
+    if (mode == "check" and changed) or (mode == "run" and changed and cfg.fail_on_changed):
         code = 1
     if errored:
         code = max(code, 2)
@@ -351,6 +399,7 @@ def _run(
     class_methods_order: str | None = None,
     method_type_order: str | None = None,
     fail: bool | None = None,
+    no_cache: bool = False,
 ) -> None:
     cfg = _build_config(
         config,
@@ -372,7 +421,12 @@ def _run(
     if not files:
         typer.echo("csort: no Python files found")
         raise typer.Exit(0)
-    code, changed = _process_files(files, cfg, mode)
+    cache_dir = _resolve_cache_dir(cfg, use_cache=not no_cache)
+    cache = Cache(cache_dir / "cache.json" if cache_dir is not None else None)
+    if cache.path is not None:
+        cache.load()
+    code, changed = _process_files(files, cfg, mode, cache=cache)
+    cache.save()
     if mode == "run":
         typer.echo(f"done: {len(changed)} file(s) sorted of {len(files)} scanned")
     elif mode == "check" and not changed:
@@ -395,6 +449,7 @@ def run(
     class_methods_order: ClassMethodsOrderOpt = None,
     method_type_order: MethodTypeOrderOpt = None,
     fail: NoFailOpt = None,
+    no_cache: NoCacheOpt = False,
 ) -> None:
     """Sort Python files in place (or stdin -> stdout with ``-``).
 
@@ -416,6 +471,7 @@ def run(
         class_methods_order=class_methods_order,
         method_type_order=method_type_order,
         fail=fail,
+        no_cache=no_cache,
     )
 
 
@@ -432,6 +488,7 @@ def check(
     remove_type_checking: RemoveTypeCheckingOpt = False,
     class_methods_order: ClassMethodsOrderOpt = None,
     method_type_order: MethodTypeOrderOpt = None,
+    no_cache: NoCacheOpt = False,
 ) -> None:
     """Exit non-zero if any file would be changed by sorting."""
     _run(
@@ -447,6 +504,7 @@ def check(
         remove_type_checking=remove_type_checking,
         class_methods_order=class_methods_order,
         method_type_order=method_type_order,
+        no_cache=no_cache,
     )
 
 
@@ -463,6 +521,7 @@ def diff(
     remove_type_checking: RemoveTypeCheckingOpt = False,
     class_methods_order: ClassMethodsOrderOpt = None,
     method_type_order: MethodTypeOrderOpt = None,
+    no_cache: NoCacheOpt = False,
 ) -> None:
     """Print unified diffs of the changes csort would make."""
     _run(
@@ -478,6 +537,7 @@ def diff(
         remove_type_checking=remove_type_checking,
         class_methods_order=class_methods_order,
         method_type_order=method_type_order,
+        no_cache=no_cache,
     )
 
 
@@ -510,6 +570,8 @@ def config_show(config: ConfigOpt = None) -> None:
     typer.echo(f"cli.fail_on_changed = {cfg.fail_on_changed}")
     typer.echo(f"discovery.exclude = {cfg.exclude}")
     typer.echo(f"discovery.recursive = {cfg.recursive}")
+    typer.echo(f"cli.cache = {cfg.cache_enabled}")
+    typer.echo(f"cli.cache_dir = {cfg.cache_dir or '<default: ~/.cache/csort/<slug>>'}")
 
 
 def main() -> None:

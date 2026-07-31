@@ -142,7 +142,20 @@ the discovered file config.
 # Pre-commit hooks and CI rely on this to detect drift. Override per-invocation
 # with `--no-fail` (useful from formatter tasks that always write).
 fail_on_changed = true
+
+# Content-hash skip cache: avoids re-parsing already-sorted files.
+# Default: on, stored in ~/.cache/csort/<project-slug>/cache.json
+# cache = true
+# cache_dir = ".csort-cache"  # override location (relative to cwd or absolute)
 ```
+
+The cache stores ``sha256(sorted_output)`` keyed by ``(config_signature, source_hash)``.
+On a repeat run, if the file's current content hash matches the cached sorted hash,
+the file is skipped entirely — no parse, no sort, no write. The cache is safe by
+construction: any edit changes the source hash and forces a full sort; any config
+or version change changes the signature and forces a full sort.
+
+Disable per-invocation with ``--no-cache``, or permanently with ``[cli] cache = false``.
 
 ### `[discovery]` table
 

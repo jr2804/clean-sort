@@ -14,6 +14,10 @@ from __future__ import annotations
 import tomllib
 import warnings
 from dataclasses import dataclass, field
+from hashlib import sha256
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
+from json import dumps as _json_dumps
 from pathlib import Path
 from typing import Any, Literal
 
@@ -65,6 +69,12 @@ class Config:
             ``--exclude`` flags).
         recursive: Whether file discovery descends into subdirectories
             (default ``True``). ``--no-recursive`` overrides per-invocation.
+        cache_enabled: When ``True`` (default), skip parsing/sorting for files
+            whose content hash matches a cached sorted-output hash. Disable
+            via ``[cli] cache = false`` or ``--no-cache``.
+        cache_dir: Directory storing the content-hash cache. Defaults to
+            ``~/.cache/csort/<project-slug>`` (or ``./.csort-cache/`` when
+            configured). Overrides via ``[cli] cache_dir``.
         config_path: Where the config was loaded from (``None`` = pure defaults).
     """
 
@@ -80,15 +90,43 @@ class Config:
     fail_on_changed: bool = True
     exclude: list[str] = field(default_factory=list)
     recursive: bool = True
+    cache_enabled: bool = True
+    cache_dir: Path | None = None
     config_path: Path | None = None
 
     def strategy(self, section: str) -> SectionStrategy:
         """In-section strategy for ``section`` (``"keep"`` if unset)."""
         return self.strategies.get(section, "keep")
 
+    def config_signature(self) -> str:
+        """Stable hash of the output-affecting fields + csort version.
+
+        Used as part of the content-hash cache key. Changes to any field that
+        affects sorted output, or to the csort version, invalidate the cache.
+        Non-output fields (``fail_on_changed``, ``exclude``, ``recursive``,
+        ``unknown_section``, ``cache_*``, ``config_path``) are excluded.
+        """
+        try:
+            ver = _pkg_version("clean-sort")
+        except PackageNotFoundError:
+            ver = "0.0.0"
+        relevant = {
+            "sections": self.sections,
+            "strategies": self.strategies,
+            "class_methods_enabled": self.class_methods_enabled,
+            "class_methods_order": self.class_methods_order,
+            "class_methods_type_order": self.class_methods_type_order,
+            "constants_pattern": self.constants_pattern,
+            "hoist_inline_imports": self.hoist_inline_imports,
+            "remove_type_checking": self.remove_type_checking,
+            "version": ver,
+        }
+        payload = _json_dumps(relevant, sort_keys=True).encode()
+        return sha256(payload).hexdigest()[:16]
+
     # ------------------------------------------------------------------ build
     @classmethod
-    def from_table(
+    def from_table(  # noqa: PLR0915
         cls,
         data: dict[str, Any],
         *,
@@ -138,8 +176,20 @@ class Config:
                 cfg.remove_type_checking = bool(transforms["remove_type_checking"])
 
         cli = data.get("cli", {}) or {}
-        if isinstance(cli, dict) and "fail_on_changed" in cli:
-            cfg.fail_on_changed = bool(cli["fail_on_changed"])
+        if isinstance(cli, dict):
+            if "fail_on_changed" in cli:
+                cfg.fail_on_changed = bool(cli["fail_on_changed"])
+            if "cache" in cli:
+                cfg.cache_enabled = bool(cli["cache"])
+            if "cache_dir" in cli:
+                cache_dir = cli["cache_dir"]
+                if isinstance(cache_dir, str):
+                    cfg.cache_dir = Path(cache_dir)
+                else:
+                    warnings.warn(
+                        "csort: cli.cache_dir must be a string; ignoring",
+                        stacklevel=2,
+                    )
 
         discovery = data.get("discovery", {}) or {}
         if isinstance(discovery, dict):
