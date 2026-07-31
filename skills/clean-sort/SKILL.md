@@ -38,7 +38,7 @@ _after_ formatters.
 csort run [PATHS...]            # sort in place (use `-` for stdin -> stdout)
 csort check [PATHS...]          # exit 1 if any file would change (CI / pre-commit)
 csort diff [PATHS...]           # print unified diffs
-csort config init               # write a csort.toml template
+csort config generate [--output FILE] [--with-comments] [--with-config FILE]  # produce a config template (merge from existing)
 csort config show               # print resolved config
 csort --version
 ```

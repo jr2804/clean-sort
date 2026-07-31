@@ -193,6 +193,31 @@ flags (CLI patterns append, they do not replace).
 - **Single class:** `class C:  # csort: off` leaves that class's methods
   untouched.
 
+### Generating a config template
+
+`csort config generate` produces a csort.toml template from the current
+config schema. Without options it prints the default template to stdout.
+
+```shell
+# Print the default template
+csort config generate
+
+# Write it to a file (must end in .toml)
+csort config generate --output csort.toml
+
+# Add explanatory comments for each setting
+csort config generate --with-comments --output csort.toml
+
+# Merge values from an existing config (upgrade path for new versions):
+# recognized keys are carried forward; unknown/deprecated keys are dropped
+# with a warning on stderr.
+csort config generate --with-config old-csort.toml --output csort.toml
+```
+
+The schema is the single source of truth: `generate` only emits keys that the
+currently-installed csort recognizes. This makes it the right tool for upgrading
+an old config when new options appear or old ones are removed.
+
 ### Programmatic configuration
 
 ```python
