@@ -359,7 +359,9 @@ def _process_files(
 def _sort_one(args: tuple) -> tuple:  # noqa: ANN401
     """Worker: sort a single file. Module-level for Windows spawn.
 
-    Returns ``(path_str, changed, error_msg, diff_text)``.
+    Returns ``(path_str, changed, error_msg, diff_text, cache_entries)``.
+    ``cache_entries`` is a dict of ``{key: sorted_hash}`` or ``None`` when
+    caching is disabled. The main process merges and writes these centrally.
     """
     path_str, cfg_dict, mode, cache_path_str, config_sig = args
     from pathlib import Path  # noqa: PLC0415
@@ -372,26 +374,26 @@ def _sort_one(args: tuple) -> tuple:  # noqa: ANN401
     try:
         original = path.read_text(encoding="utf-8")
     except OSError as exc:
-        return (path_str, False, f"csort: cannot read {path}: {exc}", "")
-    # Cache lookup
-    cache: Cache | None = None
+        return (path_str, False, f"csort: cannot read {path}: {exc}", "", None)
+    # Cache lookup (read-only — no save)
+    cache_entries: dict[str, str] | None = None
     if cache_path_str and config_sig and mode in ("run", "check"):
         cache = Cache(Path(cache_path_str))
         cache.load()
         source_hash = hash_text(original)
         if cache.lookup(config_sig, source_hash, source_hash):
-            return (path_str, False, None, "")
+            return (path_str, False, None, "", None)
     try:
         result = sort_source(original, cfg, filename=str(path))
     except Exception as exc:  # noqa: BLE001
-        return (path_str, False, f"csort: error in {path}: {exc}", "")
-    # Record cache
-    if cache is not None and config_sig and mode in ("run", "check"):
+        return (path_str, False, f"csort: error in {path}: {exc}", "", None)
+    # Collect cache entries (returned to main process for centralised write)
+    if cache_path_str and config_sig and mode in ("run", "check"):
         source_hash = hash_text(original)
-        cache.record(config_sig, source_hash, hash_text(result if result != original else original))
-        cache.save()
+        sorted_hash = hash_text(result if result != original else original)
+        cache_entries = {f"{config_sig}:{source_hash}": sorted_hash}
     if result == original:
-        return (path_str, False, None, "")
+        return (path_str, False, None, "", cache_entries)
     changed = True
     diff_text = ""
     if mode == "run":
@@ -407,7 +409,7 @@ def _sort_one(args: tuple) -> tuple:  # noqa: ANN401
                 tofile=str(path),
             )
         )
-    return (path_str, changed, None, diff_text)
+    return (path_str, changed, None, diff_text, cache_entries)
 
 
 def _process_files_parallel(
@@ -455,8 +457,9 @@ def _process_files_parallel(
     errored = False
     with Executor(max_workers=jobs) as ex:
         results = list(ex.map(_sort_one, args_list))
-    # Collect results in original file order
-    for path_str, changed_flag, error_msg, diff_text in results:
+    # Collect results in original file order; merge cache entries centrally
+    all_cache_entries: dict[str, str] = {}
+    for path_str, changed_flag, error_msg, diff_text, cache_entries in results:
         if error_msg:
             typer.echo(error_msg, err=True)
             errored = True
@@ -468,6 +471,12 @@ def _process_files_parallel(
                 typer.echo(f"would sort: {path_str}")
             elif mode == "diff" and diff_text:
                 typer.echo(diff_text, nl=False)
+        if cache_entries:
+            all_cache_entries.update(cache_entries)
+    # Write cache centrally (single process, no race)
+    if cache is not None and all_cache_entries:
+        cache.merge(all_cache_entries)
+        cache.save()
     code = 0
     if (mode == "check" and changed) or (mode == "run" and changed and cfg.fail_on_changed):
         code = 1
