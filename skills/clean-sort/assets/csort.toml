@@ -1,5 +1,5 @@
 # clean-sort configuration template. See references/config.md for the full schema.
-# Install into a project with: `csort config init`
+# Install into a project with: `csort config generate --output csort.toml`
 
 [module]
 sections = [

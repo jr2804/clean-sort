@@ -22,7 +22,7 @@ import typer
 
 from clean_sort import VALID_STRATEGIES, Config, __version__, load_config, sort_source
 from clean_sort.cache import Cache, hash_text
-from clean_sort.config import _VALID_MTYPES, _VALID_VIS, SectionStrategy
+from clean_sort.config import _VALID_MTYPES, _VALID_VIS, SectionStrategy, generate_config, validate_config_keys
 
 # `app`/`config_app` are runtime setup used by the decorators below; csort treats
 # such unrecognised top-level statements as barriers and will not move them.
@@ -147,60 +147,6 @@ PathsArg = Annotated[
 
 
 # ------------------------------------------------------------------------ config
-_DEFAULT_CONFIG = """\
-# clean-sort configuration. See https://codeberg.org/jr2804/clean-sort
-
-[module]
-sections = [
-    "imports",
-    "typing_imports",
-    "module_constants",
-    "enums",
-    "dataclasses",
-    "classes",
-    "functions",
-    "main_block",
-]
-
-# Per-section in-section strategy: keep | alpha | stepdown | abstraction.
-# stepdown/abstraction only affect the `functions` and `classes` sections.
-# NOTE: alpha is safe for imports/enums but can break interdependent
-# constants/classes (runtime order). Check with `csort diff` first.
-[strategy]
-enums = "alpha"
-# functions = "stepdown"
-# classes = "keep"
-
-[class_methods]
-enabled = true
-order = ["public", "protected", "private"]
-method_type_order = ["instance", "class", "static"]
-
-[cli]
-# Exit non-zero when `csort run` modifies files (pre-commit/CI friendly).
-# Use --no-fail to override per-invocation (e.g. from a formatter task).
-fail_on_changed = true
-
-# Content-hash skip cache: avoids re-parsing already-sorted files.
-# Default: on, stored in ~/.cache/csort/<project-slug>/cache.json
-# cache = true
-# cache_dir = ".csort-cache"  # override location (relative to cwd or absolute)
-
-# Parallel file processing: 0 = serial, negative = auto (int(0.75*cpu_count)).
-# Default: 0 (serial). Use --jobs/-j to override per-invocation.
-# jobs = 0
-# Parallel backend: "process" (multiprocessing) or "thread" (threading).
-# Default: "process". Use --parallel-backend to override per-invocation.
-# parallel_backend = "process"
-
-[discovery]
-# Glob patterns to exclude from file discovery (merged with --exclude flags).
-# exclude = ["vendor/**", "**/_generated.py"]
-# Whether to descend into subdirectories (default true; --no-recursive overrides).
-recursive = true
-"""
-
-
 @app.callback(invoke_without_command=True)
 def _main(
     ctx: typer.Context,
@@ -708,17 +654,61 @@ def diff(
     )
 
 
-@config_app.command("init")
-def config_init(
-    force: Annotated[bool, typer.Option("--force", help="Overwrite an existing csort.toml.")] = False,
+@config_app.command("generate")
+def config_generate(
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Write to this file (must end in .toml)."),
+    ] = None,
+    with_comments: Annotated[
+        bool,
+        typer.Option("--with-comments", help="Emit explanatory comments for each setting."),
+    ] = False,
+    with_config: Annotated[
+        Path | None,
+        typer.Option(
+            "--with-config",
+            help="Merge values from an existing config; invalid entries are dropped with warnings.",
+        ),
+    ] = None,
+    force: Annotated[bool, typer.Option("--force", help="Overwrite an existing output file.")] = False,
 ) -> None:
-    """Write a csort.toml template into the current directory."""
-    dest = Path("csort.toml")
-    if dest.exists() and not force:
-        typer.echo(f"csort: {dest} already exists (use --force to overwrite)")
+    """Generate a csort.toml config (default template, or merged from an existing one).
+
+    Without options, prints the default template. With ``--output`` writes it to
+    a file (must end in ``.toml``). With ``--with-config``, carries recognized
+    values from an existing config and drops invalid/deprecated keys (with
+    warnings). With ``--with-comments``, emits explanatory comments for each
+    setting.
+    """
+    overrides: dict[str, dict] | None = None
+    if with_config is not None:
+        import tomllib  # noqa: PLC0415
+
+        try:
+            with with_config.open("rb") as fh:
+                data = tomllib.load(fh)
+        except (OSError, tomllib.TOMLDecodeError) as exc:
+            typer.echo(f"csort: could not read {with_config}: {exc}", err=True)
+            raise typer.Exit(2) from exc
+        # If the input is a pyproject.toml, unwrap [tool.csort]
+        if with_config.name == "pyproject.toml":
+            data = data.get("tool", {}).get("csort", {}) or {}
+        overrides, invalid = validate_config_keys(data)
+        for path in invalid:
+            typer.echo(f"csort: warning: {path} is not a recognized config option; dropping", err=True)
+    content = generate_config(overrides=overrides, with_comments=with_comments)
+    if output is None:
+        typer.echo(content, nl=False)
+        return
+    if output.suffix != ".toml":
+        typer.echo(f"csort: --output must end in .toml (got {output.name})", err=True)
+        raise typer.Exit(2)
+    if output.exists() and not force:
+        typer.echo(f"csort: {output} already exists (use --force to overwrite)", err=True)
         raise typer.Exit(1)
-    dest.write_text(_DEFAULT_CONFIG, encoding="utf-8")
-    typer.echo(f"wrote {dest}")
+    output.write_text(content, encoding="utf-8")
+    typer.echo(f"wrote {output}")
 
 
 @config_app.command("show")

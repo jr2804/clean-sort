@@ -29,7 +29,7 @@ csort --version
 csort run src/                 # sort files in place
 csort check src/               # exit 1 if anything would change (CI / pre-commit)
 csort diff src/                # preview changes
-csort config init              # write a csort.toml template
+csort config generate          # write/print a csort.toml template (--with-comments, --with-config)
 ```
 
 ### Before → after

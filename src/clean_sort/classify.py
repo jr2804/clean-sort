@@ -186,12 +186,20 @@ def _has_forward_ref(node: cst.CSTNode, ctx: ClassifyContext) -> bool:
     if primary:
         names.discard(primary)
     # When ``from __future__ import annotations`` is active, annotation-only
-    # names in ``AnnAssign`` are not evaluated at runtime and must be excluded.
+    # names in ``AnnAssign`` are not evaluated at runtime. Subtract only names
+    # that appear *exclusively* in the annotation — a name that also appears in
+    # the value IS a runtime reference and must remain.
     if ctx.exclude_annotation_names and isinstance(node, cst.SimpleStatementLine):
+        value_names: set[str] = set()
+        annotation_names: set[str] = set()
         for stmt in node.body:
-            if isinstance(stmt, cst.AnnAssign) and stmt.annotation is not None:
-                annotation_names = referenced_names(stmt.annotation)
-                names -= annotation_names
+            if isinstance(stmt, cst.AnnAssign):
+                if stmt.annotation is not None:
+                    annotation_names |= referenced_names(stmt.annotation)
+                if stmt.value is not None:
+                    value_names |= referenced_names(stmt.value)
+        # Only drop annotation names that do NOT also appear in the value.
+        names -= annotation_names - value_names
     return bool(names & ctx.later_section_names)
 
 
