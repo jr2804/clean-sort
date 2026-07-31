@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   ``--no-cache``. Safe by construction: only skips files already in sorted
   state.
 
+- **Parallel file processing**: csort can sort files in parallel using a
+  process pool (``parallel_backend = "process"``, default) or thread pool
+  (``"thread"``). Configure via ``[cli] jobs`` (0 = serial, negative = auto
+  ``int(0.75*cpu_count())``) or ``--jobs``/``-j`` per-invocation. Stdin mode
+  always runs serially.
+
 - **`[discovery]` config table**: Persistent file-discovery options previously
   only available as CLI flags. `exclude` (glob list, merged with `--exclude`
   flags) and `recursive` (bool, default `true`; `--no-recursive` overrides).

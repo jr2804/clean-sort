@@ -125,6 +125,21 @@ NoCacheOpt = Annotated[
         help="Disable the content-hash skip cache (forces full sort on every file).",
     ),
 ]
+JobsOpt = Annotated[
+    int | None,
+    typer.Option(
+        "--jobs",
+        "-j",
+        help="Number of parallel workers (0=serial, negative=auto).",
+    ),
+]
+ParallelBackendOpt = Annotated[
+    str | None,
+    typer.Option(
+        "--parallel-backend",
+        help="Parallel backend: 'process' (default) or 'thread'.",
+    ),
+]
 PathsArg = Annotated[
     list[Path] | None,
     typer.Argument(help="Python files or directories to sort. Use '-' for stdin."),
@@ -170,6 +185,13 @@ fail_on_changed = true
 # Default: on, stored in ~/.cache/csort/<project-slug>/cache.json
 # cache = true
 # cache_dir = ".csort-cache"  # override location (relative to cwd or absolute)
+
+# Parallel file processing: 0 = serial, negative = auto (int(0.75*cpu_count)).
+# Default: 0 (serial). Use --jobs/-j to override per-invocation.
+# jobs = 0
+# Parallel backend: "process" (multiprocessing) or "thread" (threading).
+# Default: "process". Use --parallel-backend to override per-invocation.
+# parallel_backend = "process"
 
 [discovery]
 # Glob patterns to exclude from file discovery (merged with --exclude flags).
@@ -385,6 +407,129 @@ def _process_files(
     return code, changed
 
 
+# ---------------------------------------------------------------- parallel
+
+
+def _sort_one(args: tuple) -> tuple:  # noqa: ANN401
+    """Worker: sort a single file. Module-level for Windows spawn.
+
+    Returns ``(path_str, changed, error_msg, diff_text)``.
+    """
+    path_str, cfg_dict, mode, cache_path_str, config_sig = args
+    from pathlib import Path  # noqa: PLC0415
+
+    from clean_sort import Config, sort_source  # noqa: PLC0415
+    from clean_sort.cache import Cache, hash_text  # noqa: PLC0415
+
+    cfg = Config(**cfg_dict)
+    path = Path(path_str)
+    try:
+        original = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return (path_str, False, f"csort: cannot read {path}: {exc}", "")
+    # Cache lookup
+    cache: Cache | None = None
+    if cache_path_str and config_sig and mode in ("run", "check"):
+        cache = Cache(Path(cache_path_str))
+        cache.load()
+        source_hash = hash_text(original)
+        if cache.lookup(config_sig, source_hash, source_hash):
+            return (path_str, False, None, "")
+    try:
+        result = sort_source(original, cfg, filename=str(path))
+    except Exception as exc:  # noqa: BLE001
+        return (path_str, False, f"csort: error in {path}: {exc}", "")
+    # Record cache
+    if cache is not None and config_sig and mode in ("run", "check"):
+        source_hash = hash_text(original)
+        cache.record(config_sig, source_hash, hash_text(result if result != original else original))
+        cache.save()
+    if result == original:
+        return (path_str, False, None, "")
+    changed = True
+    diff_text = ""
+    if mode == "run":
+        path.write_text(result, encoding="utf-8")
+    elif mode == "diff":
+        import difflib  # noqa: PLC0415
+
+        diff_text = "".join(
+            difflib.unified_diff(
+                original.splitlines(keepends=True),
+                result.splitlines(keepends=True),
+                fromfile=str(path),
+                tofile=str(path),
+            )
+        )
+    return (path_str, changed, None, diff_text)
+
+
+def _process_files_parallel(
+    files: list[Path],
+    cfg: Config,
+    mode: str,
+    *,
+    cache: Cache | None = None,
+    jobs: int,
+    backend: str,
+) -> tuple[int, list[Path]]:
+    """Sort files in parallel using a process or thread pool."""
+    import multiprocessing  # noqa: PLC0415
+    from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor  # noqa: PLC0415
+
+    if jobs < 0:
+        jobs = max(1, int(0.75 * multiprocessing.cpu_count()))
+    jobs = min(jobs, len(files))
+    if jobs < 2:
+        return _process_files(files, cfg, mode, cache=cache)
+
+    config_sig = cfg.config_signature() if cache is not None else None
+    cache_path = str(cache.path) if cache is not None and cache.path is not None else ""
+    cfg_dict = {
+        "sections": cfg.sections,
+        "strategies": cfg.strategies,
+        "class_methods_enabled": cfg.class_methods_enabled,
+        "class_methods_order": cfg.class_methods_order,
+        "class_methods_type_order": cfg.class_methods_type_order,
+        "constants_pattern": cfg.constants_pattern,
+        "hoist_inline_imports": cfg.hoist_inline_imports,
+        "remove_type_checking": cfg.remove_type_checking,
+        "fail_on_changed": cfg.fail_on_changed,
+        "exclude": cfg.exclude,
+        "recursive": cfg.recursive,
+        "cache_enabled": cfg.cache_enabled,
+        "cache_dir": cfg.cache_dir,
+        "jobs": cfg.jobs,
+        "parallel_backend": cfg.parallel_backend,
+    }
+    args_list = [(str(f), cfg_dict, mode, cache_path, config_sig) for f in files]
+
+    Executor = ProcessPoolExecutor if backend == "process" else ThreadPoolExecutor
+    changed: list[Path] = []
+    errored = False
+    with Executor(max_workers=jobs) as ex:
+        results = list(ex.map(_sort_one, args_list))
+    # Collect results in original file order
+    for path_str, changed_flag, error_msg, diff_text in results:
+        if error_msg:
+            typer.echo(error_msg, err=True)
+            errored = True
+        if changed_flag:
+            changed.append(Path(path_str))
+            if mode == "run":
+                typer.echo(f"sorted: {path_str}")
+            elif mode == "check":
+                typer.echo(f"would sort: {path_str}")
+            elif mode == "diff" and diff_text:
+                typer.echo(diff_text, nl=False)
+    code = 0
+    if (mode == "check" and changed) or (mode == "run" and changed and cfg.fail_on_changed):
+        code = 1
+    if errored:
+        code = max(code, 2)
+    return code, changed
+
+
 def _run(
     paths: list[Path] | None,
     mode: str,
@@ -400,6 +545,8 @@ def _run(
     method_type_order: str | None = None,
     fail: bool | None = None,
     no_cache: bool = False,
+    jobs: int | None = None,
+    parallel_backend: str | None = None,
 ) -> None:
     cfg = _build_config(
         config,
@@ -425,7 +572,15 @@ def _run(
     cache = Cache(cache_dir / "cache.json" if cache_dir is not None else None)
     if cache.path is not None:
         cache.load()
-    code, changed = _process_files(files, cfg, mode, cache=cache)
+    # Resolve parallelism
+    effective_jobs = jobs if jobs is not None else cfg.jobs
+    effective_backend = parallel_backend if parallel_backend is not None else cfg.parallel_backend
+    if effective_jobs != 0:
+        code, changed = _process_files_parallel(
+            files, cfg, mode, cache=cache, jobs=effective_jobs, backend=effective_backend,
+        )
+    else:
+        code, changed = _process_files(files, cfg, mode, cache=cache)
     cache.save()
     if mode == "run":
         typer.echo(f"done: {len(changed)} file(s) sorted of {len(files)} scanned")
@@ -450,6 +605,8 @@ def run(
     method_type_order: MethodTypeOrderOpt = None,
     fail: NoFailOpt = None,
     no_cache: NoCacheOpt = False,
+    jobs: JobsOpt = None,
+    parallel_backend: ParallelBackendOpt = None,
 ) -> None:
     """Sort Python files in place (or stdin -> stdout with ``-``).
 
@@ -472,6 +629,8 @@ def run(
         method_type_order=method_type_order,
         fail=fail,
         no_cache=no_cache,
+        jobs=jobs,
+        parallel_backend=parallel_backend,
     )
 
 
@@ -489,6 +648,8 @@ def check(
     class_methods_order: ClassMethodsOrderOpt = None,
     method_type_order: MethodTypeOrderOpt = None,
     no_cache: NoCacheOpt = False,
+    jobs: JobsOpt = None,
+    parallel_backend: ParallelBackendOpt = None,
 ) -> None:
     """Exit non-zero if any file would be changed by sorting."""
     _run(
@@ -505,6 +666,8 @@ def check(
         class_methods_order=class_methods_order,
         method_type_order=method_type_order,
         no_cache=no_cache,
+        jobs=jobs,
+        parallel_backend=parallel_backend,
     )
 
 
@@ -522,6 +685,8 @@ def diff(
     class_methods_order: ClassMethodsOrderOpt = None,
     method_type_order: MethodTypeOrderOpt = None,
     no_cache: NoCacheOpt = False,
+    jobs: JobsOpt = None,
+    parallel_backend: ParallelBackendOpt = None,
 ) -> None:
     """Print unified diffs of the changes csort would make."""
     _run(
@@ -538,6 +703,8 @@ def diff(
         class_methods_order=class_methods_order,
         method_type_order=method_type_order,
         no_cache=no_cache,
+        jobs=jobs,
+        parallel_backend=parallel_backend,
     )
 
 
@@ -572,6 +739,8 @@ def config_show(config: ConfigOpt = None) -> None:
     typer.echo(f"discovery.recursive = {cfg.recursive}")
     typer.echo(f"cli.cache = {cfg.cache_enabled}")
     typer.echo(f"cli.cache_dir = {cfg.cache_dir or '<default: ~/.cache/csort/<slug>>'}")
+    typer.echo(f"cli.jobs = {cfg.jobs}")
+    typer.echo(f"cli.parallel_backend = {cfg.parallel_backend!r}")
 
 
 def main() -> None:

@@ -75,6 +75,12 @@ class Config:
         cache_dir: Directory storing the content-hash cache. Defaults to
             ``~/.cache/csort/<project-slug>`` (or ``./.csort-cache/`` when
             configured). Overrides via ``[cli] cache_dir``.
+        jobs: Number of parallel workers (0 = serial, negative = auto-detect
+            ``int(0.75 * cpu_count())``). Configurable via ``[cli] jobs`` or
+            ``--jobs``/``-j``.
+        parallel_backend: Parallel execution backend — ``"process"``
+            (multiprocessing, default) or ``"thread"`` (threading).
+            Configurable via ``[cli] parallel_backend`` or ``--parallel-backend``.
         config_path: Where the config was loaded from (``None`` = pure defaults).
     """
 
@@ -92,6 +98,8 @@ class Config:
     recursive: bool = True
     cache_enabled: bool = True
     cache_dir: Path | None = None
+    jobs: int = 0
+    parallel_backend: str = "process"
     config_path: Path | None = None
 
     def strategy(self, section: str) -> SectionStrategy:
@@ -188,6 +196,24 @@ class Config:
                 else:
                     warnings.warn(
                         "csort: cli.cache_dir must be a string; ignoring",
+                        stacklevel=2,
+                    )
+            if "jobs" in cli:
+                jobs = cli["jobs"]
+                if isinstance(jobs, int):
+                    cfg.jobs = jobs
+                else:
+                    warnings.warn(
+                        "csort: cli.jobs must be an integer; ignoring",
+                        stacklevel=2,
+                    )
+            if "parallel_backend" in cli:
+                backend = cli["parallel_backend"]
+                if isinstance(backend, str) and backend in ("process", "thread"):
+                    cfg.parallel_backend = backend
+                else:
+                    warnings.warn(
+                        "csort: cli.parallel_backend must be 'process' or 'thread'; ignoring",
                         stacklevel=2,
                     )
 
