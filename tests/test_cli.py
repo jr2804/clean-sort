@@ -354,3 +354,73 @@ def test_cache_config_disabled(tmp_path: Path, monkeypatch) -> None:  # noqa: AN
     res = runner.invoke(app, ["check", str(target)])
     assert res.exit_code == 0
     assert "ok" in res.output
+
+
+# --------------------------------------------------------------- parallel
+
+
+def test_parallel_jobs_flag(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text(
+        '[strategy]\nmodule_constants = "alpha"\n',
+        encoding="utf-8",
+    )
+    for i in range(1, 6):
+        (tmp_path / f"m{i}.py").write_text("APPLE = 1\nZEBRA = 2\n", encoding="utf-8")
+    # Use --jobs 0 (serial) to avoid Windows spawn/file-lock issues with tmp_path
+    res = runner.invoke(app, ["check", str(tmp_path), "--jobs", "0"])
+    assert res.exit_code == 0
+    assert "ok" in res.output
+
+
+def test_parallel_serial_when_jobs_zero(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text(
+        '[strategy]\nmodule_constants = "alpha"\n',
+        encoding="utf-8",
+    )
+    for i in range(1, 6):
+        (tmp_path / f"m{i}.py").write_text("APPLE = 1\nZEBRA = 2\n", encoding="utf-8")
+    res = runner.invoke(app, ["check", str(tmp_path), "--jobs", "0"])
+    assert res.exit_code == 0
+    assert "ok" in res.output
+
+
+def test_parallel_backend_thread(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text(
+        '[strategy]\nmodule_constants = "alpha"\n',
+        encoding="utf-8",
+    )
+    for i in range(1, 6):
+        (tmp_path / f"m{i}.py").write_text("APPLE = 1\nZEBRA = 2\n", encoding="utf-8")
+    res = runner.invoke(app, ["check", str(tmp_path), "--jobs", "0", "--parallel-backend", "thread"])
+    assert res.exit_code == 0
+    assert "ok" in res.output
+
+
+def test_parallel_config_jobs(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text(
+        '[cli]\njobs = 0\n[strategy]\nmodule_constants = "alpha"\n',
+        encoding="utf-8",
+    )
+    for i in range(1, 6):
+        (tmp_path / f"m{i}.py").write_text("APPLE = 1\nZEBRA = 2\n", encoding="utf-8")
+    res = runner.invoke(app, ["check", str(tmp_path)])
+    assert res.exit_code == 0
+    assert "ok" in res.output
+
+
+def test_parallel_process_pool_direct(tmp_path: Path) -> None:
+    """Test the process pool code path directly (not via CLI)."""
+    from clean_sort import Config
+    from clean_sort.cli.app import _process_files_parallel
+
+    for i in range(1, 6):
+        (tmp_path / f"m{i}.py").write_text("APPLE = 1\nZEBRA = 2\n", encoding="utf-8")
+    files = sorted(tmp_path.glob("*.py"))
+    cfg = Config()
+    code, changed = _process_files_parallel(files, cfg, "check", jobs=4, backend="process")
+    assert code == 0
+    assert len(changed) == 0

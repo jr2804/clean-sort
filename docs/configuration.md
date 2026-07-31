@@ -147,6 +147,13 @@ fail_on_changed = true
 # Default: on, stored in ~/.cache/csort/<project-slug>/cache.json
 # cache = true
 # cache_dir = ".csort-cache"  # override location (relative to cwd or absolute)
+
+# Parallel file processing: 0 = serial, negative = auto (int(0.75*cpu_count())).
+# Default: 0 (serial). Use --jobs/-j to override per-invocation.
+# jobs = 0
+# Parallel backend: "process" (multiprocessing) or "thread" (threading).
+# Default: "process". Use --parallel-backend to override per-invocation.
+# parallel_backend = "process"
 ```
 
 The cache stores ``sha256(sorted_output)`` keyed by ``(config_signature, source_hash)``.
@@ -156,6 +163,11 @@ construction: any edit changes the source hash and forces a full sort; any confi
 or version change changes the signature and forces a full sort.
 
 Disable per-invocation with ``--no-cache``, or permanently with ``[cli] cache = false``.
+
+Parallel processing uses a process pool (``"process"``) or thread pool (``"thread"``).
+The process pool is recommended for CPU-bound work (libcst parsing/sorting); the thread
+pool may be useful when I/O (file reads) is the bottleneck. Stdin mode always runs
+serially regardless of the ``jobs`` setting.
 
 ### `[discovery]` table
 

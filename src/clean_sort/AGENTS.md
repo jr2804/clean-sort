@@ -39,6 +39,10 @@ Core library code. Config and the Typer CLI also live here (`config.py`, `cli/ap
   no sort). Default location: ``~/.cache/csort/<project-slug>/cache.json``. Configurable via
   ``[cli] cache_dir``; disabled via ``[cli] cache = false`` or ``--no-cache``. The cache is safe by
   construction: it only skips files that are already in their sorted state.
+- **Parallel file processing**: csort can sort files in parallel using a process pool
+  (``parallel_backend = "process"``, default) or thread pool (``"thread"``).
+  Configure via ``[cli] jobs`` (0 = serial, negative = auto ``int(0.75*cpu_count())``)
+  or ``--jobs``/``-j`` per-invocation. Stdin mode always runs serially.
 
 ## Work Guidance
 
