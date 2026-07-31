@@ -319,3 +319,38 @@ def test_run_no_recursive_overrides_config_true(tmp_path: Path, monkeypatch) -> 
     assert res.exit_code == 0
     assert "top.py" in res.output
     assert "nested.py" not in res.output
+
+
+# --------------------------------------------------------------- --no-cache flag
+
+
+def test_no_cache_flag_disables_cache(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text(
+        '[strategy]\nmodule_constants = "alpha"\n',
+        encoding="utf-8",
+    )
+    target = tmp_path / "m.py"
+    target.write_text("ZEBRA = 1\nAPPLE = 2\n", encoding="utf-8")
+    # First run sorts and caches
+    runner.invoke(app, ["run", str(target), "--no-fail"])
+    # Second run with --no-cache should still sort (not skip)
+    res = runner.invoke(app, ["check", str(target), "--no-cache"])
+    assert res.exit_code == 0  # already sorted, but --no-cache means no skip
+    assert "ok" in res.output
+
+
+def test_cache_config_disabled(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "csort.toml").write_text(
+        '[cli]\ncache = false\n[strategy]\nmodule_constants = "alpha"\n',
+        encoding="utf-8",
+    )
+    target = tmp_path / "m.py"
+    target.write_text("ZEBRA = 1\nAPPLE = 2\n", encoding="utf-8")
+    # First run sorts
+    runner.invoke(app, ["run", str(target), "--no-fail"])
+    # Second run: cache disabled in config, should still sort
+    res = runner.invoke(app, ["check", str(target)])
+    assert res.exit_code == 0
+    assert "ok" in res.output

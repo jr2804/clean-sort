@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Content-hash skip cache**: csort now caches sorted-output hashes keyed by
+  ``(config_signature, source_hash)``. On repeat runs, files whose content hash
+  matches the cached sorted hash are skipped entirely (no parse, no sort).
+  Default location: ``~/.cache/csort/<project-slug>/cache.json``. Configurable
+  via ``[cli] cache_dir``; disabled via ``[cli] cache = false`` or
+  ``--no-cache``. Safe by construction: only skips files already in sorted
+  state.
+
 - **`[discovery]` config table**: Persistent file-discovery options previously
   only available as CLI flags. `exclude` (glob list, merged with `--exclude`
   flags) and `recursive` (bool, default `true`; `--no-recursive` overrides).

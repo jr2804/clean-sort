@@ -11,16 +11,19 @@ from __future__ import annotations
 
 import importlib.metadata
 
+from .cache import Cache, hash_text
 from .config import VALID_STRATEGIES, Config, discover
 from .config import load as load_config
 from .pipeline import SectionSorter, sort_source, would_change
 
 __all__ = [
     "VALID_STRATEGIES",
+    "Cache",
     "Config",
     "SectionSorter",
     "__version__",
     "discover",
+    "hash_text",
     "load_config",
     "sort_source",
     "would_change",

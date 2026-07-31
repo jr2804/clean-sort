@@ -34,6 +34,11 @@ Core library code. Config and the Typer CLI also live here (`config.py`, `cli/ap
 - File discovery is governed by `Config.exclude` (glob list) and `Config.recursive` (bool, default `True`),
   configurable via `[discovery]`. CLI `--exclude` patterns merge with (append to) the config list;
   `--no-recursive` overrides `recursive=true` per-invocation.
+- **Content-hash skip cache**: csort caches the hash of sorted output keyed by ``(config_signature, source_hash)``.
+  On repeat runs, files whose content hash matches the cached sorted hash are skipped entirely (no parse,
+  no sort). Default location: ``~/.cache/csort/<project-slug>/cache.json``. Configurable via
+  ``[cli] cache_dir``; disabled via ``[cli] cache = false`` or ``--no-cache``. The cache is safe by
+  construction: it only skips files that are already in their sorted state.
 
 ## Work Guidance
 
