@@ -31,16 +31,17 @@ class ClassifyContext:
     """Context passed to :func:`classify` for forward-reference detection.
 
     Attributes:
-        later_section_names: Names whose section comes after
-            ``module_constants`` in the configured section order. A constant
-            whose RHS references any of these is treated as a barrier,
-            preventing ``NameError`` at import time.
+        later_names_by_section: Maps each configured section to the set of
+            names defined in a *later* section. An assignment classified into
+            section ``S`` whose RHS references any name in
+            ``later_names_by_section[S]`` is treated as a barrier, preventing
+            ``NameError`` at import time.
         exclude_annotation_names: When true, names that appear only in
             ``AnnAssign`` annotations are excluded from the forward-reference
             check (safe when ``from __future__ import annotations`` is active).
     """
 
-    later_section_names: set[str]
+    later_names_by_section: dict[str, set[str]]
     exclude_annotation_names: bool = False
 
 
@@ -86,9 +87,13 @@ def classify(node: cst.CSTNode, cfg, *, ctx: ClassifyContext | None = None) -> s
         if smalls and all(isinstance(s, (cst.Import, cst.ImportFrom)) for s in smalls):
             return "imports"
         if _is_constant_assignment(node, cfg):
-            if ctx is not None and _has_forward_ref(node, ctx):
+            if ctx is not None and _has_forward_ref(node, ctx, "module_constants"):
                 return cfg.unknown_section
             return "module_constants"
+        if _is_runtime_setup_assignment(node):
+            if ctx is not None and _has_forward_ref(node, ctx, "runtime_setup"):
+                return cfg.unknown_section
+            return "runtime_setup"
     return cfg.unknown_section
 
 
@@ -178,8 +183,13 @@ def module_top_level_names(body: Sequence[cst.CSTNode]) -> dict[str, int]:
     return index
 
 
-def _has_forward_ref(node: cst.CSTNode, ctx: ClassifyContext) -> bool:
-    """True when ``node`` references a name defined in a later section."""
+def _has_forward_ref(node: cst.CSTNode, ctx: ClassifyContext, section: str) -> bool:
+    """True when ``node`` (an assignment in ``section``) references a name defined later.
+
+    ``section`` is the section the assignment is being classified into. A name
+    is a forward reference if it is defined in any section that comes after
+    ``section`` in the configured order.
+    """
     names = referenced_names(node)
     # Remove the node's own primary name (an assignment target is not a forward ref).
     primary = primary_name(node)
@@ -200,7 +210,21 @@ def _has_forward_ref(node: cst.CSTNode, ctx: ClassifyContext) -> bool:
                     value_names |= referenced_names(stmt.value)
         # Only drop annotation names that do NOT also appear in the value.
         names -= annotation_names - value_names
-    return bool(names & ctx.later_section_names)
+    later = ctx.later_names_by_section.get(section, set())
+    return bool(names & later)
+
+
+def _is_runtime_setup_assignment(node: cst.SimpleStatementLine) -> bool:
+    """True when ``node`` is a module-level assignment line.
+
+    The complement of :func:`_is_constant_assignment` (called only after that
+    returns ``False``): a statement whose smalls are all ``Assign``/``AnnAssign``
+    but whose target is not a constant — e.g. ``logger = get_logger(__name__)``,
+    ``app = typer.Typer()``, or a tuple unpacking ``a, b = init()``. Such
+    statements classify into the ``runtime_setup`` section.
+    """
+    smalls = list(node.body)
+    return bool(smalls) and all(isinstance(s, (cst.Assign, cst.AnnAssign)) for s in smalls)
 
 
 def _is_constant_assignment(node: cst.SimpleStatementLine, cfg) -> bool:  # noqa: ANN001

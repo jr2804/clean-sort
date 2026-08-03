@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **`runtime_setup` section**: Module-level assignments to non-constant names
+  (``logger = get_logger(__name__)``, ``app = typer.Typer()``) now group into
+  a new `runtime_setup` bucket (default order: after `module_constants`)
+  instead of acting as barriers. An import below such a statement can now
+  migrate up to the imports block. The forward-reference barrier is extended
+  to cover `runtime_setup` assignments, preventing `NameError` for
+  assignments that reference later-defined names.
+
 - **`csort config generate` subcommand**: produces a csort.toml template from
   the current config schema. Supports `--output FILE` (must end in `.toml`),
   `--with-comments` (explanatory comments for each setting), and `--with-config

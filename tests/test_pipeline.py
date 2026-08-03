@@ -65,11 +65,12 @@ def test_barrier_setup_not_moved() -> None:
 
 def test_recognized_not_crossing_barrier() -> None:
     # two function runs separated by a barrier stay separated; alpha does not
-    # pull `a` across the barrier to join `b`.
-    src = "def b():\n    pass\nbarrier = make()\ndef a():\n    pass\n"
+    # pull `a` across the barrier to join `b`. A bare call is a genuine barrier
+    # (unrecognised statement), unlike a non-constant assignment (runtime_setup).
+    src = "def b():\n    pass\nsetup_registry()\ndef a():\n    pass\n"
     out = sort_source(src, Config(strategies={"functions": "alpha"}))
-    assert out.index("def b") < out.index("barrier = make")
-    assert out.index("barrier = make") < out.index("def a")
+    assert out.index("def b") < out.index("setup_registry")
+    assert out.index("setup_registry") < out.index("def a")
 
 
 def test_future_import_pinned_first() -> None:
@@ -312,5 +313,98 @@ def test_forward_reference_barrier_is_idempotent() -> None:
     once = sort_source(src, Config())
     twice = sort_source(once, Config())
     assert once == twice
+
+
+# ------------------------------------------------- runtime_setup section
+# Module-level non-constant assignments (logger, app, client, ...) group into
+# the ``runtime_setup`` section instead of acting as barriers.
+
+
+def test_runtime_setup_after_imports_and_constants() -> None:
+    # logger = ... lands in runtime_setup, ordered after imports/constants.
+    src = textwrap.dedent("""\
+        import os
+        logger = get_logger(__name__)
+        MAX_CONN = 10
+        def handler():
+            pass
+    """)
+    out = sort_source(src, Config())
+    assert out.index("import os") < out.index("MAX_CONN")
+    assert out.index("MAX_CONN") < out.index("logger =")
+    assert out.index("logger =") < out.index("def handler")
+
+
+def test_reexport_import_hoists_above_runtime_setup() -> None:
+    # An import below a runtime_setup statement must migrate up to the imports
+    # block (the barrier no longer blocks it).
+    src = textwrap.dedent("""\
+        from knox.logging import get_logger
+
+        logger = get_logger(__name__)
+
+        from knox.llm import set_user_providers  # re-export
+    """)
+    out = sort_source(src, Config())
+    assert out.index("from knox.logging") < out.index("from knox.llm")
+    assert out.index("from knox.llm") < out.index("logger =")
+
+
+def test_runtime_setup_referencing_later_name_is_barrier() -> None:
+    # A runtime_setup assignment referencing a later-defined name must stay put
+    # (same forward-reference safety as constants).
+    src = textwrap.dedent("""\
+        import os
+        class Service:
+            pass
+        handler = _make_handler(Service)
+        _make_handler = lambda cls: cls()
+    """)
+    out = sort_source(src, Config())
+    # handler references Service (classes section, after runtime_setup) -> barrier
+    assert out.index("class Service") < out.index("handler =")
+
+
+def test_runtime_setup_referencing_imported_name_moves() -> None:
+    # A runtime_setup assignment referencing only imported/builtin names is safe
+    # and reorders normally (no false barrier).
+    src = textwrap.dedent("""\
+        import os
+        logger = get_logger(os.name)
+        MAX_CONN = 10
+    """)
+    out = sort_source(src, Config())
+    assert out.index("MAX_CONN") < out.index("logger =")
+
+
+def test_runtime_setup_groups_keeping_original_order() -> None:
+    # Multiple runtime_setup statements group together in their original order
+    # (default strategy is "keep").
+    src = textwrap.dedent("""\
+        import os
+        logger = get_logger(__name__)
+        app = typer.Typer()
+        def handler():
+            pass
+    """)
+    out = sort_source(src, Config())
+    logger_pos = out.index("logger =")
+    app_pos = out.index("app =")
+    handler_pos = out.index("def handler")
+    assert logger_pos < app_pos < handler_pos
+
+
+def test_runtime_setup_referencing_constant_is_safe() -> None:
+    # A runtime_setup assignment may reference a module_constant (defined before
+    # runtime_setup) — not a forward ref.
+    src = textwrap.dedent("""\
+        import os
+        MAX_CONN = 10
+        client = connect(host, MAX_CONN)
+        def connect(host, n):
+            return n
+    """)
+    out = sort_source(src, Config())
+    assert out.index("MAX_CONN") < out.index("client =")
 
 

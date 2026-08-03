@@ -17,6 +17,7 @@ the bottom, and the `main` guard last.
 | `imports`          | `import`, `from ... import` (except `from __future__`)         |
 | `typing_imports`   | `if TYPE_CHECKING:` block                                      |
 | `module_constants` | assignments to `ALL_CAPS` or dunder (`__all__`, `__version__`) |
+| `runtime_setup`    | module-level assignments to non-constant names (`logger = ...`, `app = ...`) |
 | `enums`            | classes whose base ends in `Enum` / `Flag`                     |
 | `dataclasses`      | classes decorated `@dataclass`                                 |
 | `classes`          | other `class` definitions                                      |
@@ -35,6 +36,7 @@ sections = [
     "imports",
     "typing_imports",
     "module_constants",
+    "runtime_setup",
     "enums",
     "dataclasses",
     "classes",

@@ -6,13 +6,13 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from clean_sort.cli.app import app
-
-runner = CliRunner()
-
+from clean_sort import Config
+from clean_sort.cli.app import _process_files_parallel, app
 
 # ----------------------------------------------------------- --fail/--no-fail
 _UNSORTED = "ZEBRA = 1\nAPPLE = 2\n"
+
+runner = CliRunner()
 
 
 def test_version_flag() -> None:
@@ -487,9 +487,6 @@ def test_parallel_config_jobs(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN
 
 def test_parallel_process_pool_direct(tmp_path: Path) -> None:
     """Test the process pool code path directly (not via CLI)."""
-    from clean_sort import Config
-    from clean_sort.cli.app import _process_files_parallel
-
     for i in range(1, 6):
         (tmp_path / f"m{i}.py").write_text("APPLE = 1\nZEBRA = 2\n", encoding="utf-8")
     files = sorted(tmp_path.glob("*.py"))
