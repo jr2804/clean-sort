@@ -55,11 +55,12 @@ def zebra():
 > before committing an `alpha` reordering of constants or classes.
 >
 > **Note:** csort now automatically prevents the most common `NameError` case:
-> a module-level constant whose RHS references a name defined in a later
-> section (e.g. ``_DEFAULT_COLOR = Color.RED`` where ``Color`` is an enum)
-> is treated as a barrier — it stays in place rather than being hoisted to
-> ``module_constants``. When ``from __future__ import annotations`` is active,
-> annotation-only names in ``AnnAssign`` are excluded from this check.
+> a module-level assignment (constant or ``runtime_setup``) whose RHS
+> references a name defined in a later section (e.g. ``_DEFAULT_COLOR =
+> Color.RED`` where ``Color`` is an enum) is treated as a barrier — it stays
+> in place rather than being hoisted to its section. When ``from __future__
+> import annotations`` is active, annotation-only names in ``AnnAssign`` are
+> excluded from this check.
 
 ### `stepdown` — caller before callee
 

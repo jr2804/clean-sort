@@ -27,8 +27,17 @@ def test_classify_module_constants() -> None:
     assert classify(_body("ALL_CAPS: int = 1\n")[0], Config()) == "module_constants"
 
 
-def test_classify_non_constant_is_other() -> None:
-    assert classify(_body("result = compute()\n")[0], Config()) == "other"
+def test_classify_non_constant_is_runtime_setup() -> None:
+    # A non-constant assignment (lowercase/snake_case target) groups into
+    # runtime_setup, not the unknown_section fallback.
+    assert classify(_body("result = compute()\n")[0], Config()) == "runtime_setup"
+    assert classify(_body("logger = get_logger(__name__)\n")[0], Config()) == "runtime_setup"
+
+
+def test_classify_non_assignment_is_other() -> None:
+    # Statements that are not imports/assignments/defs (e.g. a bare call) stay
+    # in the unknown_section fallback and act as barriers.
+    assert classify(_body("setup_registry()\n")[0], Config()) == "other"
 
 
 def test_classify_enum() -> None:

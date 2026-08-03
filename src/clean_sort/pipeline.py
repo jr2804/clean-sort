@@ -55,22 +55,23 @@ class SectionSorter(cst.CSTTransformer):
 
         # Build a name-to-index map for forward-reference detection.
         module_index = module_top_level_names(body)
-        # Classify each indexed node to determine its section, then collect
-        # names whose section comes after ``module_constants``.
+        # Classify each indexed node to determine its section, then collect,
+        # for every configured section, the names defined in a LATER section.
         name_section: dict[str, str] = {}
         for name, idx in module_index.items():
             name_section[name] = classify(body[idx], self.cfg)
-        try:
-            mc_pos = self.cfg.sections.index("module_constants")
-        except ValueError:
-            mc_pos = -1  # module_constants not configured; no barrier needed
-        later_section_names = {
-            name
-            for name, sec in name_section.items()
-            if sec in self._reorder_sections
-            and mc_pos >= 0
-            and self.cfg.sections.index(sec) > mc_pos
-        }
+        section_pos = {sec: i for i, sec in enumerate(self.cfg.sections)}
+        later_names_by_section: dict[str, set[str]] = {}
+        for sec in self._reorder_sections:
+            if sec not in section_pos:
+                continue
+            later_names_by_section[sec] = {
+                name
+                for name, nsec in name_section.items()
+                if nsec in self._reorder_sections
+                and nsec in section_pos
+                and section_pos[nsec] > section_pos[sec]
+            }
         # When ``from __future__ import annotations`` is active, annotation-only
         # names in ``AnnAssign`` are not evaluated at runtime and must be
         # excluded from the forward-reference check.
@@ -80,7 +81,7 @@ class SectionSorter(cst.CSTTransformer):
         current: list[tuple[str, cst.CSTNode]] = []
         for node in remainder:
             ctx = ClassifyContext(
-                later_section_names=later_section_names,
+                later_names_by_section=later_names_by_section,
                 exclude_annotation_names=exclude_annotations,
             )
             section = classify(node, self.cfg, ctx=ctx)

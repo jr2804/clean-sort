@@ -58,6 +58,7 @@ sections = [
     "imports",
     "typing_imports",
     "module_constants",
+    "runtime_setup",
     "enums",
     "dataclasses",
     "classes",

@@ -26,6 +26,7 @@ RECOGNIZED_SECTIONS: tuple[str, ...] = (
     "imports",
     "typing_imports",
     "module_constants",
+    "runtime_setup",
     "enums",
     "dataclasses",
     "classes",
@@ -40,6 +41,9 @@ _VALID_VIS = frozenset({"public", "protected", "private"})
 _VALID_MTYPES = frozenset({"instance", "class", "static"})
 
 CSORT_FILES: tuple[str, ...] = ("csort.toml", ".config/csort.toml")
+
+
+SectionStrategy = Literal["keep", "alpha", "stepdown", "abstraction"]
 
 
 @dataclass
@@ -254,6 +258,19 @@ class Config:
         self._set_order(cm.get("method_type_order"), attr="class_methods_type_order")
 
 
+@dataclass(frozen=True)
+class ConfigKey:
+    """One recognized ``[section].key`` config option."""
+
+    section: str
+    key: str
+    default: Any
+    comment: str
+    #: When True, the key is emitted as ``# key = ...`` in the default template
+    #: (i.e. commented out) unless an override is provided.
+    commented_out: bool = False
+
+
 def _legacy_undersort_overrides(data: dict[str, Any], *, is_pyproject: bool) -> dict[str, Any]:
     """Pull ``class_methods`` overrides from a legacy ``[undersort]`` table.
 
@@ -337,22 +354,6 @@ def load(
     cfg = Config.from_table(table, path=path, raw=data, is_pyproject=is_pyproject)
 
     return cfg
-
-
-SectionStrategy = Literal["keep", "alpha", "stepdown", "abstraction"]
-
-
-@dataclass(frozen=True)
-class ConfigKey:
-    """One recognized ``[section].key`` config option."""
-
-    section: str
-    key: str
-    default: Any
-    comment: str
-    #: When True, the key is emitted as ``# key = ...`` in the default template
-    #: (i.e. commented out) unless an override is provided.
-    commented_out: bool = False
 
 
 #: The canonical schema, ordered by section then key. `generate_config()` walks
