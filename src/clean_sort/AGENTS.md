@@ -19,6 +19,12 @@ Core library code. Config and the Typer CLI also live here (`config.py`, `cli/ap
   `runtime_setup` (after `module_constants`), so an import below them can still
   migrate up to the imports block. The complement of the constant bucket; a
   section absent from `Config.sections` still behaves as a barrier.
+- **`dunder_exports` section**: Assignments to configured dunder names
+  (`dunder_exports_names`, default `["__all__"]`) classify into `dunder_exports`
+  (after `functions`, before `main_block`), placing them at the bottom of the
+  file per community convention. Names not in the list stay in
+  `module_constants`; the forward-reference barrier applies as for
+  `module_constants`.
 - **Forward-reference barrier**: A module-level assignment (constant or
   `runtime_setup`) whose RHS references a name defined in a later
   section (e.g. ``_DEFAULT_COLOR = Color.RED`` where ``Color`` is an enum) is treated as a barrier —
