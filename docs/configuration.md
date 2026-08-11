@@ -39,6 +39,7 @@ If no configuration is found, built-in defaults are used.
 | `class_methods`  | `order`             | permutation of `public`, `protected`, `private`  |
 | `class_methods`  | `method_type_order` | permutation of `instance`, `class`, `static`     |
 | `classification` | `constants_pattern` | regex (default `^[A-Z_][A-Z0-9_]*$`)             |
+| `classification` | `dunder_exports_names` | list of dunder names (default `["__all__"]`)  |
 
 Any value of `sections` that is **not** a recognised section name acts as a
 barrier (see [Section layout](section-layout.md)).
@@ -63,6 +64,7 @@ sections = [
     "dataclasses",
     "classes",
     "functions",
+    "dunder_exports",
     "main_block",
 ]
 
@@ -99,6 +101,18 @@ pattern to widen or narrow it:
 [tool.csort.classification]
 constants_pattern = "^[A-Z][A-Z0-9_]*$"
 ```
+
+Dunder names like `__all__` classify into a dedicated `dunder_exports` section
+that is placed after `functions` and before `main_block`. By default only
+`__all__` is treated this way; extend the list to keep `__version__`,
+`__author__`, etc. near the bottom of the module too:
+
+```toml
+[tool.csort.classification]
+dunder_exports_names = ["__all__", "__version__", "__author__"]
+```
+
+Any dunder not listed here still classifies into `module_constants`.
 
 ### Command-line overrides
 

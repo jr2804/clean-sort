@@ -31,6 +31,7 @@ RECOGNIZED_SECTIONS: tuple[str, ...] = (
     "dataclasses",
     "classes",
     "functions",
+    "dunder_exports",
     "main_block",
 )
 
@@ -59,6 +60,10 @@ class Config:
         class_methods_order: Method visibility ordering.
         class_methods_type_order: Method-type ordering within each visibility.
         constants_pattern: Regex for the ``module_constants`` classification.
+        dunder_exports_names: Dunder names (``__all__``, ``__version__``, etc.)
+            that classify into ``dunder_exports`` — a section placed after
+            functions and before ``main_block`` — rather than
+            ``module_constants``.
         unknown_section: Bucket name for unrecognised top-level nodes. Nodes in a
             bucket that is absent from ``sections`` are appended at the end,
             preserving their original relative order.
@@ -94,6 +99,10 @@ class Config:
     class_methods_order: list[str] = field(default_factory=lambda: ["public", "protected", "private"])
     class_methods_type_order: list[str] = field(default_factory=lambda: ["instance", "class", "static"])
     constants_pattern: str = r"^[A-Z_][A-Z0-9_]*$"
+    #: Dunder names classified into the ``dunder_exports`` section (placed
+    #: after functions, before ``main_block``) rather than ``module_constants``.
+    #: Extend the list to include ``__version__``, ``__author__``, etc.
+    dunder_exports_names: list[str] = field(default_factory=lambda: ["__all__"])
     unknown_section: str = "other"
     hoist_inline_imports: bool = False
     remove_type_checking: bool = False
@@ -129,6 +138,7 @@ class Config:
             "class_methods_order": self.class_methods_order,
             "class_methods_type_order": self.class_methods_type_order,
             "constants_pattern": self.constants_pattern,
+            "dunder_exports_names": self.dunder_exports_names,
             "hoist_inline_imports": self.hoist_inline_imports,
             "remove_type_checking": self.remove_type_checking,
             "version": ver,
@@ -175,10 +185,20 @@ class Config:
             cfg._apply_class_methods(_legacy_undersort_overrides(raw, is_pyproject=is_pyproject))
 
         classification = data.get("classification", {}) or {}
-        if isinstance(classification, dict) and "constants_pattern" in classification:
-            pattern = classification["constants_pattern"]
-            if isinstance(pattern, str):
-                cfg.constants_pattern = pattern
+        if isinstance(classification, dict):
+            if "constants_pattern" in classification:
+                pattern = classification["constants_pattern"]
+                if isinstance(pattern, str):
+                    cfg.constants_pattern = pattern
+            if "dunder_exports_names" in classification:
+                names = classification["dunder_exports_names"]
+                if isinstance(names, list) and all(isinstance(n, str) for n in names):
+                    cfg.dunder_exports_names = list(names)
+                else:
+                    warnings.warn(
+                        "csort: classification.dunder_exports_names must be a list of strings; ignoring",
+                        stacklevel=2,
+                    )
 
         transforms = data.get("transforms", {}) or {}
         if isinstance(transforms, dict):
@@ -392,6 +412,11 @@ CONFIG_SCHEMA: list[ConfigKey] = [
     ConfigKey(
         "classification", "constants_pattern", r"^[A-Z_][A-Z0-9_]*$",
         "Regex for the module_constants classification.",
+        commented_out=True,
+    ),
+    ConfigKey(
+        "classification", "dunder_exports_names", ["__all__"],
+        "Dunder names placed in the dunder_exports section (after functions, before main_block).",
         commented_out=True,
     ),
     ConfigKey(

@@ -215,3 +215,43 @@ def test_discovery_invalid_exclude_warns(tmp_path: Path) -> None:
         cfg = load_config(explicit=cfg_file)
     assert cfg.exclude == []  # falls back to default
     assert any("discovery.exclude must be a list" in str(w.message) for w in caught)
+
+
+# ---------------------------------------------------- [classification] table
+
+
+def test_classification_dunder_exports_names_parsed(tmp_path: Path) -> None:
+    cfg_file = tmp_path / "csort.toml"
+    cfg_file.write_text(
+        textwrap.dedent(
+            """\
+            [classification]
+            dunder_exports_names = ["__all__", "__version__", "__author__"]
+            """
+        ),
+        encoding="utf-8",
+    )
+    cfg = load_config(explicit=cfg_file)
+    assert cfg.dunder_exports_names == ["__all__", "__version__", "__author__"]
+
+
+def test_classification_dunder_exports_names_default() -> None:
+    assert Config().dunder_exports_names == ["__all__"]
+
+
+def test_classification_invalid_dunder_exports_names_warns(tmp_path: Path) -> None:
+    cfg_file = tmp_path / "csort.toml"
+    cfg_file.write_text(
+        textwrap.dedent(
+            """\
+            [classification]
+            dunder_exports_names = "not-a-list"
+            """
+        ),
+        encoding="utf-8",
+    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        cfg = load_config(explicit=cfg_file)
+    assert cfg.dunder_exports_names == ["__all__"]  # default
+    assert any("dunder_exports_names must be a list" in str(w.message) for w in caught)

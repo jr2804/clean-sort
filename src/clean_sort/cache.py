@@ -18,8 +18,6 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
-__all__ = ["Cache", "hash_text"]
-
 
 class Cache:
     """On-disk content-hash cache keyed by ``config_signature:source_hash``.
@@ -96,3 +94,5 @@ class Cache:
 def hash_text(text: str) -> str:
     """Stable hex digest of a string (used for both source and sorted output)."""
     return sha256(text.encode("utf-8")).hexdigest()
+
+__all__ = ["Cache", "hash_text"]

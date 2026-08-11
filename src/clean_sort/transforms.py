@@ -33,12 +33,6 @@ from typing import cast
 
 import libcst as cst
 
-__all__ = [
-    "InlineImportHoister",
-    "TypeCheckingRemover",
-    "apply_transforms",
-]
-
 #: Comment pattern that marks a linter-exclusion directive. Matches bare
 #: ``noqa`` as well as scoped forms like ``noqa: E501`` or ``noqa: E501, F401``.
 _NOQA_RE = re.compile(r"#\s*noqa\b", re.IGNORECASE)
@@ -596,3 +590,9 @@ def apply_transforms(module: cst.Module, cfg) -> cst.Module:  # noqa: ANN001
     if getattr(cfg, "hoist_inline_imports", False):
         module = module.visit(InlineImportHoister())
     return module
+
+__all__ = [
+    "InlineImportHoister",
+    "TypeCheckingRemover",
+    "apply_transforms",
+]

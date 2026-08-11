@@ -26,6 +26,46 @@ def test_module_constants_before_classes() -> None:
     assert out.index("MAX = 1") < out.index("class C")
 
 
+def test_dunder_exports_after_functions() -> None:
+    # __all__ moves to the dunder_exports section, after functions and
+    # before the main guard.
+    src = '"""doc"""\nimport os\n\n__all__ = ["main"]\n\n\ndef main():\n    pass\n'
+    out = sort_source(src, KEEP)
+    assert out.index("def main") < out.index("__all__")
+
+
+def test_dunder_exports_before_main_block() -> None:
+    src = 'if __name__ == "__main__":\n    main()\n\n__all__ = ["main"]\n\n\ndef main():\n    pass\n'
+    out = sort_source(src, KEEP)
+    assert out.index("__all__") < out.index("if __name__")
+    assert out.index("def main") < out.index("__all__")
+
+
+def test_dunder_exports_moves_from_top() -> None:
+    # Previously __all__ was hoisted to module_constants (top); now it sinks
+    # to the bottom, next to the main guard.
+    src = '"""doc"""\nimport sys\n\n__all__ = ["main"]\n\nMAX_SIZE = 10\n\n\ndef main():\n    pass\n'
+    out = sort_source(src, KEEP)
+    assert out.index("import sys") < out.index("MAX_SIZE")
+    assert out.index("MAX_SIZE") < out.index("def main")
+    assert out.index("def main") < out.index("__all__")
+
+
+def test_dunder_exports_idempotent() -> None:
+    src = '"""doc"""\nimport sys\n\n__all__ = ["main"]\n\nMAX_SIZE = 10\n\n\ndef main():\n    pass\n'
+    once = sort_source(src, KEEP)
+    twice = sort_source(once, KEEP)
+    assert once == twice
+
+
+def test_non_export_dunder_stays_module_constants() -> None:
+    # __version__ is not in the default exports list, so it stays in
+    # module_constants at the top.
+    src = '"""doc"""\nimport sys\n\n__version__ = "1.0.0"\n\n\ndef main():\n    pass\n'
+    out = sort_source(src, KEEP)
+    assert out.index('__version__') < out.index("def main")
+
+
 def test_typing_imports_before_classes() -> None:
     src = "class C:\n    pass\nif TYPE_CHECKING:\n    import os\n"
     out = sort_source(src, KEEP)

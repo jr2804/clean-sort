@@ -88,7 +88,7 @@ Discovered from (first wins, walking up from the target file): `--config`,
 [tool.csort.module]
 sections = [
     "imports", "typing_imports", "module_constants", "enums",
-    "dataclasses", "classes", "functions", "main_block",
+    "dataclasses", "classes", "functions", "dunder_exports", "main_block",
 ]
 
 [tool.csort.strategy]            # per-section; omit => "keep"

@@ -27,6 +27,22 @@ def test_classify_module_constants() -> None:
     assert classify(_body("ALL_CAPS: int = 1\n")[0], Config()) == "module_constants"
 
 
+def test_classify_dunder_exports() -> None:
+    # __all__ classifies into the dedicated dunder_exports section by default.
+    assert classify(_body('__all__ = ["MAX_SIZE"]\n')[0], Config()) == "dunder_exports"
+
+
+def test_classify_dunder_not_in_exports_is_module_constant() -> None:
+    # Dunders not listed in dunder_exports_names stay in module_constants.
+    assert classify(_body('__version__ = "1.0.0"\n')[0], Config()) == "module_constants"
+
+
+def test_classify_custom_dunder_exports_names() -> None:
+    cfg = Config(dunder_exports_names=["__all__", "__version__"])
+    assert classify(_body('__all__ = ["MAX_SIZE"]\n')[0], cfg) == "dunder_exports"
+    assert classify(_body('__version__ = "1.0.0"\n')[0], cfg) == "dunder_exports"
+
+
 def test_classify_non_constant_is_runtime_setup() -> None:
     # A non-constant assignment (lowercase/snake_case target) groups into
     # runtime_setup, not the unknown_section fallback.
