@@ -61,7 +61,7 @@ read for backwards-compatibility class-method ordering.
 ```toml
 [module]
 sections = ["imports", "typing_imports", "module_constants", "enums",
-            "dataclasses", "classes", "functions", "main_block"]
+            "dataclasses", "classes", "functions", "dunder_exports", "main_block"]
 
 [strategy]            # per-section in-section strategy; omit => "keep"
 enums = "alpha"

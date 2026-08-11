@@ -12,17 +12,6 @@ from dataclasses import dataclass
 
 import libcst as cst
 
-__all__ = [
-    "ClassifyContext",
-    "classify",
-    "has_future_annotations",
-    "is_future_import",
-    "is_module_docstring",
-    "module_top_level_names",
-    "primary_name",
-    "referenced_names",
-]
-
 
 _ENUM_SUFFIXES = ("Enum", "Flag")
 
@@ -87,9 +76,10 @@ def classify(node: cst.CSTNode, cfg, *, ctx: ClassifyContext | None = None) -> s
         if smalls and all(isinstance(s, (cst.Import, cst.ImportFrom)) for s in smalls):
             return "imports"
         if _is_constant_assignment(node, cfg):
-            if ctx is not None and _has_forward_ref(node, ctx, "module_constants"):
+            section = "dunder_exports" if _is_dunder_export(node, cfg) else "module_constants"
+            if ctx is not None and _has_forward_ref(node, ctx, section):
                 return cfg.unknown_section
-            return "module_constants"
+            return section
         if _is_runtime_setup_assignment(node):
             if ctx is not None and _has_forward_ref(node, ctx, "runtime_setup"):
                 return cfg.unknown_section
@@ -227,6 +217,16 @@ def _is_runtime_setup_assignment(node: cst.SimpleStatementLine) -> bool:
     return bool(smalls) and all(isinstance(s, (cst.Assign, cst.AnnAssign)) for s in smalls)
 
 
+def _is_dunder_export(node: cst.SimpleStatementLine, cfg) -> bool:  # noqa: ANN001
+    """True when the assignment target is a configured dunder export name.
+
+    Only the first target is checked, matching :func:`_is_constant_assignment`
+    which uses the first name as the representative key.
+    """
+    exports = set(cfg.dunder_exports_names)
+    return primary_name(node) in exports
+
+
 def _is_constant_assignment(node: cst.SimpleStatementLine, cfg) -> bool:  # noqa: ANN001
     smalls = list(node.body)
     if not smalls or not all(isinstance(s, (cst.Assign, cst.AnnAssign)) for s in smalls):
@@ -308,3 +308,14 @@ def referenced_names(node: cst.CSTNode) -> set[str]:
 
     node.visit(_Collector())
     return names
+
+__all__ = [
+    "ClassifyContext",
+    "classify",
+    "has_future_annotations",
+    "is_future_import",
+    "is_module_docstring",
+    "module_top_level_names",
+    "primary_name",
+    "referenced_names",
+]

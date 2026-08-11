@@ -22,6 +22,7 @@ the bottom, and the `main` guard last.
 | `dataclasses`      | classes decorated `@dataclass`                                 |
 | `classes`          | other `class` definitions                                      |
 | `functions`        | top-level `def`                                                |
+| `dunder_exports`   | assignments to configured dunder names (`__all__` by default)  |
 | `main_block`       | `if __name__ == "__main__":`                                   |
 | `other` (barrier)  | anything else — **never moved**                                |
 
@@ -41,6 +42,7 @@ sections = [
     "dataclasses",
     "classes",
     "functions",
+    "dunder_exports",
     "main_block",
 ]
 ```

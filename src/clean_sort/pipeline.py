@@ -12,8 +12,6 @@ from .classify import ClassifyContext, classify, has_future_annotations, is_futu
 from .config import Config
 from .sorters import alpha, dependency
 
-__all__ = ["SectionSorter", "sort_source", "would_change"]
-
 #: Sections for which the dependency strategies (stepdown/abstraction) are valid.
 _DEPENDENCY_SECTIONS = frozenset({"functions", "classes"})
 
@@ -171,3 +169,5 @@ def sort_source(source: str, cfg: Config, *, filename: str = "<unknown>") -> str
 def would_change(source: str, cfg: Config, *, filename: str = "<unknown>") -> bool:
     """True if :func:`sort_source` would alter ``source``."""
     return sort_source(source, cfg, filename=filename) != source
+
+__all__ = ["SectionSorter", "sort_source", "would_change"]

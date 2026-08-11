@@ -21,11 +21,6 @@ from collections import defaultdict
 
 import libcst as cst
 
-__all__ = [
-    "MethodSorter",
-    "file_disabled",
-]
-
 _ALL_VIS = ("public", "protected", "private")
 _ALL_MTYPES = ("instance", "class", "static")
 _DISABLE_MARKERS = ("csort: off", "nosort")
@@ -150,3 +145,8 @@ def method_type(method: cst.FunctionDef) -> str:
         if ident == "staticmethod":
             return "static"
     return "instance"
+
+__all__ = [
+    "MethodSorter",
+    "file_disabled",
+]

@@ -80,7 +80,7 @@ ignore-regex = "https?://|\b[A-Z]+\b"
 [tool.csort.module]
 # Ordered list of section buckets. Each top-level statement is classified into one.
 # Recognized sections: imports, typing_imports, module_constants, runtime_setup, enums,
-# dataclasses, classes, functions, main_block. Anything unrecognized lands in "other" (kept last).
+# dataclasses, classes, functions, dunder_exports, main_block. Anything unrecognized lands in "other" (kept last).
 sections = [
     "imports",
     "typing_imports",
@@ -90,6 +90,7 @@ sections = [
     "dataclasses",
     "classes",
     "functions",
+    "dunder_exports",
     "main_block",
 ]
 

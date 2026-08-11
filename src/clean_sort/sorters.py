@@ -14,8 +14,6 @@ import libcst as cst
 
 from .classify import primary_name, referenced_names
 
-__all__ = ["alpha", "dependency"]
-
 
 def alpha(nodes: list[cst.CSTNode]) -> list[cst.CSTNode]:
     """Stable sort by ``(primary name, original index)``."""
@@ -100,3 +98,5 @@ def dependency(nodes: list[cst.CSTNode], direction: str) -> list[cst.CSTNode]:
                 order.append(i)
 
     return [nodes[i] for i in order]
+
+__all__ = ["alpha", "dependency"]

@@ -24,6 +24,7 @@ directory):
 | `class_methods`  | `order`                | permutation of `public, protected, private`      |
 | `class_methods`  | `method_type_order`    | permutation of `instance, class, static`         |
 | `classification` | `constants_pattern`    | regex (default `^[A-Z_][A-Z0-9_]*$`)             |
+| `classification` | `dunder_exports_names` | list of dunder names (default `["__all__"]`)     |
 | `transforms`     | `hoist_inline_imports` | bool (default `false`)                           |
 | `transforms`     | `remove_type_checking` | bool (default `false`)                           |
 
@@ -33,7 +34,8 @@ directory):
 | ------------------ | -------------------------------------------------------------- |
 | `imports`          | `import`, `from ... import` (except `from __future__`)         |
 | `typing_imports`   | `if TYPE_CHECKING:` block                                      |
-| `module_constants` | assignments to `ALL_CAPS` or dunder (`__all__`, `__version__`) |
+| `module_constants` | assignments to `ALL_CAPS` or dunder (except `dunder_exports_names`) |
+| `dunder_exports`   | assignments to configured dunder names (`__all__` by default) |
 | `enums`            | classes whose base ends in `Enum`/`Flag`                       |
 | `dataclasses`      | classes decorated `@dataclass`                                 |
 | `classes`          | other `class` definitions                                      |
