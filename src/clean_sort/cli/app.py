@@ -104,6 +104,13 @@ HoistInlineImportsOpt = Annotated[
         help="Move imports nested inside function bodies to the top of the module.",
     ),
 ]
+HoistMainImportsOpt = Annotated[
+    bool | None,
+    typer.Option(
+        "--hoist-main-imports/--no-hoist-main-imports",
+        help="Move imports from inside if __name__ == '__main__': to the top (default: on).",
+    ),
+]
 RemoveTypeCheckingOpt = Annotated[
     bool,
     typer.Option(
@@ -123,6 +130,13 @@ NoCacheOpt = Annotated[
     typer.Option(
         "--no-cache",
         help="Disable the content-hash skip cache (forces full sort on every file).",
+    ),
+]
+CacheTtlDaysOpt = Annotated[
+    int | None,
+    typer.Option(
+        "--cache-ttl",
+        help="Days before an unseen cache entry is pruned (0 = never; default from config).",
     ),
 ]
 JobsOpt = Annotated[
@@ -188,18 +202,24 @@ def _build_config(
     section_only: str | None = None,
     strategy_overrides: str | None = None,
     hoist_inline_imports: bool = False,
+    hoist_main_imports: bool | None = None,
     remove_type_checking: bool = False,
     class_methods_order: str | None = None,
     method_type_order: str | None = None,
     fail: bool | None = None,
+    cache_ttl_days: int | None = None,
 ) -> Config:
     cfg = load_config(explicit=explicit, start=Path.cwd())
     if no_class_methods:
         cfg.class_methods_enabled = False
     if hoist_inline_imports:
         cfg.hoist_inline_imports = True
+    if hoist_main_imports is not None:
+        cfg.hoist_main_imports = hoist_main_imports
     if remove_type_checking:
         cfg.remove_type_checking = True
+    if cache_ttl_days is not None:
+        cfg.cache_ttl_days = cache_ttl_days
     if section_only:
         cfg.sections = [s.strip() for s in section_only.split(",") if s.strip()]
     if strategy_overrides:
@@ -378,7 +398,7 @@ def _sort_one(args: tuple) -> tuple:  # noqa: ANN401
     # Cache lookup (read-only — no save)
     cache_entries: dict[str, str] | None = None
     if cache_path_str and config_sig and mode in ("run", "check"):
-        cache = Cache(Path(cache_path_str))
+        cache = Cache(Path(cache_path_str), ttl_days=cfg.cache_ttl_days)
         cache.load()
         source_hash = hash_text(original)
         if cache.lookup(config_sig, source_hash, source_hash):
@@ -441,7 +461,9 @@ def _process_files_parallel(
         "class_methods_type_order": cfg.class_methods_type_order,
         "constants_pattern": cfg.constants_pattern,
         "hoist_inline_imports": cfg.hoist_inline_imports,
+        "hoist_main_imports": cfg.hoist_main_imports,
         "remove_type_checking": cfg.remove_type_checking,
+        "cache_ttl_days": cfg.cache_ttl_days,
         "fail_on_changed": cfg.fail_on_changed,
         "exclude": cfg.exclude,
         "recursive": cfg.recursive,
@@ -495,11 +517,13 @@ def _run(
     section_only: str | None = None,
     strategy_overrides: str | None = None,
     hoist_inline_imports: bool = False,
+    hoist_main_imports: bool | None = None,
     remove_type_checking: bool = False,
     class_methods_order: str | None = None,
     method_type_order: str | None = None,
     fail: bool | None = None,
     no_cache: bool = False,
+    cache_ttl_days: int | None = None,
     jobs: int | None = None,
     parallel_backend: str | None = None,
 ) -> None:
@@ -509,10 +533,12 @@ def _run(
         section_only,
         strategy_overrides,
         hoist_inline_imports=hoist_inline_imports,
+        hoist_main_imports=hoist_main_imports,
         remove_type_checking=remove_type_checking,
         class_methods_order=class_methods_order,
         method_type_order=method_type_order,
         fail=fail,
+        cache_ttl_days=cache_ttl_days,
     )
     paths = paths or [Path.cwd()]
     if any(p.name == "-" for p in paths):
@@ -524,7 +550,7 @@ def _run(
         typer.echo("csort: no Python files found")
         raise typer.Exit(0)
     cache_dir = _resolve_cache_dir(cfg, use_cache=not no_cache)
-    cache = Cache(cache_dir / "cache.json" if cache_dir is not None else None)
+    cache = Cache(cache_dir / "cache.json" if cache_dir is not None else None, ttl_days=cfg.cache_ttl_days)
     if cache.path is not None:
         cache.load()
     # Resolve parallelism
@@ -555,11 +581,13 @@ def run(
     section_only: SectionOnlyOpt = None,
     strategy_overrides: StrategyOverridesOpt = None,
     hoist_inline_imports: HoistInlineImportsOpt = False,
+    hoist_main_imports: HoistMainImportsOpt = None,
     remove_type_checking: RemoveTypeCheckingOpt = False,
     class_methods_order: ClassMethodsOrderOpt = None,
     method_type_order: MethodTypeOrderOpt = None,
     fail: NoFailOpt = None,
     no_cache: NoCacheOpt = False,
+    cache_ttl_days: CacheTtlDaysOpt = None,
     jobs: JobsOpt = None,
     parallel_backend: ParallelBackendOpt = None,
 ) -> None:
@@ -579,11 +607,13 @@ def run(
         section_only,
         strategy_overrides,
         hoist_inline_imports=hoist_inline_imports,
+        hoist_main_imports=hoist_main_imports,
         remove_type_checking=remove_type_checking,
         class_methods_order=class_methods_order,
         method_type_order=method_type_order,
         fail=fail,
         no_cache=no_cache,
+        cache_ttl_days=cache_ttl_days,
         jobs=jobs,
         parallel_backend=parallel_backend,
     )
@@ -599,10 +629,12 @@ def check(
     section_only: SectionOnlyOpt = None,
     strategy_overrides: StrategyOverridesOpt = None,
     hoist_inline_imports: HoistInlineImportsOpt = False,
+    hoist_main_imports: HoistMainImportsOpt = None,
     remove_type_checking: RemoveTypeCheckingOpt = False,
     class_methods_order: ClassMethodsOrderOpt = None,
     method_type_order: MethodTypeOrderOpt = None,
     no_cache: NoCacheOpt = False,
+    cache_ttl_days: CacheTtlDaysOpt = None,
     jobs: JobsOpt = None,
     parallel_backend: ParallelBackendOpt = None,
 ) -> None:
@@ -617,10 +649,12 @@ def check(
         section_only,
         strategy_overrides,
         hoist_inline_imports=hoist_inline_imports,
+        hoist_main_imports=hoist_main_imports,
         remove_type_checking=remove_type_checking,
         class_methods_order=class_methods_order,
         method_type_order=method_type_order,
         no_cache=no_cache,
+        cache_ttl_days=cache_ttl_days,
         jobs=jobs,
         parallel_backend=parallel_backend,
     )
@@ -636,10 +670,12 @@ def diff(
     section_only: SectionOnlyOpt = None,
     strategy_overrides: StrategyOverridesOpt = None,
     hoist_inline_imports: HoistInlineImportsOpt = False,
+    hoist_main_imports: HoistMainImportsOpt = None,
     remove_type_checking: RemoveTypeCheckingOpt = False,
     class_methods_order: ClassMethodsOrderOpt = None,
     method_type_order: MethodTypeOrderOpt = None,
     no_cache: NoCacheOpt = False,
+    cache_ttl_days: CacheTtlDaysOpt = None,
     jobs: JobsOpt = None,
     parallel_backend: ParallelBackendOpt = None,
 ) -> None:
@@ -654,10 +690,12 @@ def diff(
         section_only,
         strategy_overrides,
         hoist_inline_imports=hoist_inline_imports,
+        hoist_main_imports=hoist_main_imports,
         remove_type_checking=remove_type_checking,
         class_methods_order=class_methods_order,
         method_type_order=method_type_order,
         no_cache=no_cache,
+        cache_ttl_days=cache_ttl_days,
         jobs=jobs,
         parallel_backend=parallel_backend,
     )
@@ -732,12 +770,14 @@ def config_show(config: ConfigOpt = None) -> None:
     typer.echo(f"class_methods.method_type_order = {cfg.class_methods_type_order}")
     typer.echo(f"classification.constants_pattern = {cfg.constants_pattern!r}")
     typer.echo(f"transforms.hoist_inline_imports = {cfg.hoist_inline_imports}")
+    typer.echo(f"transforms.hoist_main_imports = {cfg.hoist_main_imports}")
     typer.echo(f"transforms.remove_type_checking = {cfg.remove_type_checking}")
     typer.echo(f"cli.fail_on_changed = {cfg.fail_on_changed}")
     typer.echo(f"discovery.exclude = {cfg.exclude}")
     typer.echo(f"discovery.recursive = {cfg.recursive}")
     typer.echo(f"cli.cache = {cfg.cache_enabled}")
     typer.echo(f"cli.cache_dir = {cfg.cache_dir or '<default: ~/.cache/csort/<slug>>'}")
+    typer.echo(f"cli.cache_ttl_days = {cfg.cache_ttl_days}")
     typer.echo(f"cli.jobs = {cfg.jobs}")
     typer.echo(f"cli.parallel_backend = {cfg.parallel_backend!r}")
 

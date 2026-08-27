@@ -105,12 +105,14 @@ class Config:
     dunder_exports_names: list[str] = field(default_factory=lambda: ["__all__"])
     unknown_section: str = "other"
     hoist_inline_imports: bool = False
+    hoist_main_imports: bool = True
     remove_type_checking: bool = False
     fail_on_changed: bool = True
     exclude: list[str] = field(default_factory=list)
     recursive: bool = True
     cache_enabled: bool = True
     cache_dir: Path | None = None
+    cache_ttl_days: int = 30
     jobs: int = 0
     parallel_backend: str = "process"
     config_path: Path | None = None
@@ -140,6 +142,7 @@ class Config:
             "constants_pattern": self.constants_pattern,
             "dunder_exports_names": self.dunder_exports_names,
             "hoist_inline_imports": self.hoist_inline_imports,
+            "hoist_main_imports": self.hoist_main_imports,
             "remove_type_checking": self.remove_type_checking,
             "version": ver,
         }
@@ -204,6 +207,8 @@ class Config:
         if isinstance(transforms, dict):
             if "hoist_inline_imports" in transforms:
                 cfg.hoist_inline_imports = bool(transforms["hoist_inline_imports"])
+            if "hoist_main_imports" in transforms:
+                cfg.hoist_main_imports = bool(transforms["hoist_main_imports"])
             if "remove_type_checking" in transforms:
                 cfg.remove_type_checking = bool(transforms["remove_type_checking"])
 
@@ -240,6 +245,16 @@ class Config:
                         "csort: cli.parallel_backend must be 'process' or 'thread'; ignoring",
                         stacklevel=2,
                     )
+
+        if "cache_ttl_days" in cli:
+            ttl = cli["cache_ttl_days"]
+            if isinstance(ttl, int) and ttl >= 0:
+                cfg.cache_ttl_days = ttl
+            else:
+                warnings.warn(
+                    "csort: cli.cache_ttl_days must be a non-negative int; ignoring",
+                    stacklevel=2,
+                )
 
         discovery = data.get("discovery", {}) or {}
         if isinstance(discovery, dict):
@@ -425,6 +440,11 @@ CONFIG_SCHEMA: list[ConfigKey] = [
         commented_out=True,
     ),
     ConfigKey(
+        "transforms", "hoist_main_imports", True,
+        "Move imports from inside if __name__ == \"__main__\": to the top (deduped).",
+        commented_out=True,
+    ),
+    ConfigKey(
         "transforms", "remove_type_checking", False,
         "Delete if TYPE_CHECKING: guards and hoist the imports they contained.",
         commented_out=True,
@@ -436,6 +456,11 @@ CONFIG_SCHEMA: list[ConfigKey] = [
     ConfigKey(
         "cli", "cache", True,
         "Content-hash skip cache: avoids re-parsing already-sorted files.",
+        commented_out=True,
+    ),
+    ConfigKey(
+        "cli", "cache_ttl_days", 30,
+        "Days before an unseen cache entry is pruned (0 = never prune).",
         commented_out=True,
     ),
     ConfigKey(
