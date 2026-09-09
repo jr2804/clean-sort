@@ -153,6 +153,79 @@ def test_remove_type_checking_with_else_block_skipped() -> None:
     assert "TYPE_CHECKING" in out  # untouched
 
 
+def test_remove_type_checking_drops_else_any_alias() -> None:
+    # if TYPE_CHECKING / else: X = Any — alias is dropped, import hoisted.
+    src = (
+        "from typing import TYPE_CHECKING, Any\n"
+        "\n"
+        "if TYPE_CHECKING:\n"
+        "    from loguru import Logger\n"
+        "else:\n"
+        "    Logger = Any\n"
+        "\n"
+        "x: Logger = None  # type: ignore[assignment]\n"
+    )
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "Logger = Any" not in out
+    assert "from loguru import Logger" in out
+
+
+def test_remove_type_checking_drops_else_typing_any_alias() -> None:
+    # ``else: X = typing.Any`` form — also accepted and dropped.
+    src = "import typing\n\nif TYPE_CHECKING:\n    from loguru import Logger\nelse:\n    Logger = typing.Any\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "Logger = typing.Any" not in out
+    assert "from loguru import Logger" in out
+
+
+def test_remove_type_checking_drops_else_annassign_alias() -> None:
+    # ``else: X: Any = ...`` (AnnAssign) form — also accepted and dropped.
+    src = "from typing import TYPE_CHECKING, Any\n\nif TYPE_CHECKING:\n    from loguru import Logger\nelse:\n    Logger: Any\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "Logger: Any" not in out
+    assert "from loguru import Logger" in out
+
+
+def test_remove_type_checking_drops_else_alias_with_comment() -> None:
+    # A trailing comment on the alias does not block the transform.
+    src = "from typing import TYPE_CHECKING, Any\n\nif TYPE_CHECKING:\n    from loguru import Logger\nelse:\n    Logger = Any  # runtime fallback\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" not in out
+    assert "runtime fallback" not in out
+    assert "from loguru import Logger" in out
+
+
+def test_remove_type_checking_drops_else_alias_idempotent() -> None:
+    # Re-running the transform on the dissolved output must be a no-op.
+    src = "from typing import TYPE_CHECKING, Any\n\nif TYPE_CHECKING:\n    from loguru import Logger\nelse:\n    Logger = Any\n\nx = 1\n"
+    once = sort(src, remove_type_checking=True)
+    assert sort(once, remove_type_checking=True) == once
+
+
+def test_remove_type_checking_else_alias_with_extras_still_skipped() -> None:
+    # If the else branch has BOTH a valid alias AND other code, leave alone.
+    src = "from typing import TYPE_CHECKING, Any\n\nif TYPE_CHECKING:\n    from loguru import Logger\nelse:\n    Logger = Any\n    x = 1\n\ny = 2\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" in out  # untouched -- else has real code
+
+
+def test_remove_type_checking_else_multi_target_alias_still_skipped() -> None:
+    # A multi-target ``X = Y = Any`` is NOT recognised as a type-only alias.
+    src = "from typing import TYPE_CHECKING, Any\n\nif TYPE_CHECKING:\n    from loguru import Logger\nelse:\n    Logger = Fallback = Any\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" in out  # untouched
+
+
+def test_remove_type_checking_else_non_any_alias_still_skipped() -> None:
+    # An ``X = SomethingElse`` (not Any) alias must NOT be silently dropped.
+    src = "from typing import TYPE_CHECKING\n\nif TYPE_CHECKING:\n    from loguru import Logger\nelse:\n    Logger = object\n\nx = 1\n"
+    out = sort(src, remove_type_checking=True)
+    assert "TYPE_CHECKING" in out  # untouched
+
+
 def test_both_transforms_together() -> None:
     src = "from typing import TYPE_CHECKING\n\nif TYPE_CHECKING:\n    import http.client\n\ndef f():\n    import json\n    return 1\n"
     out = sort(src, hoist_inline_imports=True, remove_type_checking=True)

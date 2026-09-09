@@ -15,6 +15,12 @@ Rationale (python-ultimate skill):
   import annotations``) makes them unnecessary. The fix is to dissolve the guard
   and use a normal top-level import.
 
+  An ``else: X = Any`` / ``else: X = typing.Any`` fallback alias (the runtime
+  stand-in for a type-only import) is recognised and silently dropped when the
+  guard is dissolved — the real import now sits at module level, so the alias
+  has no purpose. Only single-target aliases whose value resolves to ``Any``
+  are dropped; any other code in the ``else:`` branch blocks the transform.
+
 Both transforms are **potentially breaking**: they change import timing. They
 are opt-in (``Config.hoist_inline_imports`` / ``Config.remove_type_checking``)
 and default to ``False``.
@@ -463,16 +469,86 @@ def _is_type_checking_test(test: cst.BaseExpression) -> bool:
     return False
 
 
+def _alias_target_name(stmt: cst.BaseSmallStatement) -> cst.Name | None:
+    """Return the single ``Name`` target of a 1-target ``Assign``/``AnnAssign``."""
+    if isinstance(stmt, cst.Assign):
+        if len(stmt.targets) != 1:
+            return None
+        target = stmt.targets[0].target
+        return target if isinstance(target, cst.Name) else None
+    if isinstance(stmt, cst.AnnAssign) and isinstance(stmt.target, cst.Name):
+        return stmt.target
+    return None
+
+
+def _is_type_only_alias(line: cst.SimpleStatementLine) -> bool:
+    """True when ``line`` is a single-target alias whose value is ``Any``.
+
+    Matches the ``else: X = Any`` / ``else: X = typing.Any`` runtime-vague
+    fallback pattern used alongside ``if TYPE_CHECKING:``. Such aliases exist
+    only to keep static type checkers happy when the imported type-only name
+    is unavailable at runtime — once the ``if TYPE_CHECKING:`` guard is
+    dissolved and the real import is hoisted to module level, the alias is
+    dead weight and may be silently dropped.
+
+    Recognised forms (each must be a single-target assignment):
+
+    * ``X = Any``
+    * ``X = typing.Any``  (any dotted chain ending in ``Any``)
+    * ``X: Any = ...``  / ``X: typing.Any = ...``  (``AnnAssign``)
+    * All of the above may carry a trailing ``# comment``.
+
+    Anything more complex (multiple targets, chained assignments, calls,
+    other expressions) returns ``False`` and blocks the transform.
+    """
+    if len(line.body) != 1:
+        return False
+    stmt = line.body[0]
+    if _alias_target_name(stmt) is None:
+        return False
+
+    # Plain ``X = Any`` / ``X = typing.Any``
+    if isinstance(stmt, cst.Assign):
+        return _is_any_expression(stmt.value)
+
+    # ``X: Any = ...`` / ``X: typing.Any = ...``  (value, if present, ignored)
+    if isinstance(stmt, cst.AnnAssign) and stmt.annotation is not None:
+        return _is_any_expression(stmt.annotation.annotation)
+
+    return False
+
+
+def _is_any_expression(expr: cst.BaseExpression) -> bool:
+    """True when ``expr`` resolves to the ``Any`` special form.
+
+    Accepts bare ``Any`` and any dotted chain ending in ``Any`` (e.g.
+    ``typing.Any``). The ``Any`` spelling is the PEP 484 canonical marker;
+    arbitrary expressions like ``Any | None`` or ``Optional[Any]`` are NOT
+    recognised — those are not simple type-only fallbacks.
+    """
+    if isinstance(expr, cst.Name):
+        return expr.value == "Any"
+    if isinstance(expr, cst.Attribute):
+        return expr.attr.value == "Any"
+    return False
+
+
 def _extract_imports_from_if(node: cst.If) -> list[cst.SimpleStatementLine] | None:
     """Extract import statements from an ``if TYPE_CHECKING:`` block.
 
-    Returns ``None`` if the block contains non-import statements (in which case
-    the transform is skipped for safety — the block may have runtime side
-    effects we don't understand).
+    Returns ``None`` if the block contains non-import, non-type-alias
+    statements (in which case the transform is skipped for safety — the
+    block may have runtime side effects we don't understand).
+
+    An ``else:`` branch may additionally contain ``X = Any`` /
+    ``X = typing.Any`` style type-only fallback aliases — these are silently
+    dropped when the guard is dissolved (the real import now sits at module
+    level, so the alias has no purpose).
     """
     imports: list[cst.SimpleStatementLine] = []
 
-    def _collect(stmts: cst.BaseSuite | list[cst.BaseStatement]) -> bool:
+    def _collect_strict(stmts: cst.BaseSuite | list[cst.BaseStatement]) -> bool:
+        """If / elif branch: only pure imports allowed."""
         if isinstance(stmts, cst.IndentedBlock):
             items = stmts.body
         elif isinstance(stmts, list):
@@ -490,18 +566,49 @@ def _extract_imports_from_if(node: cst.If) -> list[cst.SimpleStatementLine] | No
                 return False  # nested compound statement
         return True
 
-    if not _collect(node.body):
+    def _collect_else(stmts: cst.BaseSuite | list[cst.BaseStatement]) -> bool:
+        """``else:`` branch: pure imports AND ``X = Any`` aliases allowed.
+
+        Imports are extracted; aliases are silently discarded (they vanish
+        when the surrounding ``if`` is removed — no explicit drop needed).
+        """
+        if isinstance(stmts, cst.IndentedBlock):
+            items = stmts.body
+        elif isinstance(stmts, list):
+            items = stmts
+        else:
+            return False
+
+        for item in items:
+            if isinstance(item, cst.SimpleStatementLine):
+                if all(_is_simple_import(s) for s in item.body) and item.body:
+                    imports.append(item)
+                elif _is_type_only_alias(item):
+                    continue  # drop type-only fallback alias
+                else:
+                    return False  # non-import, non-alias statement
+            else:
+                return False  # nested compound statement
+        return True
+
+    if not _collect_strict(node.body):
         return None
 
-    # Handle elif/orelse chains — only dissolve if the entire chain is imports.
+    # Handle elif/orelse chains.  Each ``elif`` uses the strict rule; a
+    # trailing plain ``else:`` is allowed to carry ``X = Any`` aliases.
     current = node.orelse
     while current is not None:
         if isinstance(current, cst.If):
-            if not _collect(current.body):
+            if not _collect_strict(current.body):
                 return None
             current = current.orelse
+        elif isinstance(current, cst.Else):
+            if not _collect_else(current.body):
+                return None
+            current = None
         elif isinstance(current, cst.IndentedBlock):
-            if not _collect(current):
+            # Bare ``else:`` block (no ``Else`` wrapper) -- same rule.
+            if not _collect_else(current):
                 return None
             current = None
         else:
@@ -682,6 +789,7 @@ def apply_transforms(module: cst.Module, cfg) -> cst.Module:  # noqa: ANN001
     if getattr(cfg, "hoist_main_imports", True):
         module = module.visit(MainBlockImportHoister())
     return module
+
 
 __all__ = [
     "InlineImportHoister",
