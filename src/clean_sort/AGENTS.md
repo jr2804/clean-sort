@@ -39,6 +39,9 @@ Core library code. Config and the Typer CLI also live here (`config.py`, `cli/ap
 - Opt-in import transforms (`transforms.py`) are the only transforms that mutate code beyond reordering:
   `hoist_inline_imports` and `remove_type_checking`. Both default off, run as a pre-pass before
   section sorting, and are potentially breaking (they change import timing).
+  `remove_type_checking` also dissolves `if TYPE_CHECKING: ... else: X = Any` fallback aliases
+  (single-target assignments whose value resolves to `Any`), dropping the alias; any other code
+  in the `else:` branch blocks the transform.
 - `csort run` exits with code 1 when it modifies any file (pre-commit/CI friendly). This is governed
   by `Config.fail_on_changed` (default `True`), configurable via `[cli] fail_on_changed` and
   overridable per-invocation with `--fail` / `--no-fail`. `csort check` is unaffected and always
