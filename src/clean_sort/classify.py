@@ -12,8 +12,8 @@ from dataclasses import dataclass
 
 import libcst as cst
 
-
 _ENUM_SUFFIXES = ("Enum", "Flag")
+
 
 @dataclass
 class ClassifyContext:
@@ -308,6 +308,7 @@ def referenced_names(node: cst.CSTNode) -> set[str]:
 
     node.visit(_Collector())
     return names
+
 
 __all__ = [
     "ClassifyContext",

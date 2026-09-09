@@ -1,4 +1,5 @@
 """Tests for the content-hash skip cache."""
+
 from __future__ import annotations
 
 import json

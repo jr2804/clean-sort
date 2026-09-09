@@ -133,7 +133,7 @@ def test_config_generate_with_config_invalid_dropped(tmp_path: Path, monkeypatch
     monkeypatch.chdir(tmp_path)
     existing = tmp_path / "existing.toml"
     existing.write_text(
-        '[strategy]\nbogus_key = true\n[old_section]\nfoo = 42\n',
+        "[strategy]\nbogus_key = true\n[old_section]\nfoo = 42\n",
         encoding="utf-8",
     )
     res = runner.invoke(app, ["config", "generate", "--with-config", str(existing)])
