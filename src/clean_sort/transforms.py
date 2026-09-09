@@ -38,94 +38,6 @@ import libcst as cst
 _NOQA_RE = re.compile(r"#\s*noqa\b", re.IGNORECASE)
 
 
-# ------------------------------------------------------- main-block import hoist
-
-
-class MainBlockImportHoister(cst.CSTTransformer):
-    """Move imports from inside ``if __name__ == \"__main__\":`` to the top.
-
-    Many scripts put a late ``import os`` inside the ``__main__`` guard.
-    This hoister extracts those imports, dedupes against the existing
-    top-level imports, and prepends the new ones at the import insertion
-    point.  The guard body is left intact otherwise (empty guard body is
-    collapsed to ``pass``).
-    """
-
-    def __init__(self) -> None:
-        self._hoisted: list[cst.SimpleStatementLine] = []
-
-    def leave_Module(self, original_node: cst.Module, updated_node: cst.Module) -> cst.Module:  # noqa: N802
-        body = list(updated_node.body)
-        new_body: list[cst.CSTNode] = []
-        changed = False
-        for node in body:
-            if isinstance(node, cst.If) and _is_main_guard(node.test):
-                cleaned, imports = _extract_main_imports(node)
-                if imports:
-                    self._hoisted.extend(imports)
-                    if cleaned is None:
-                        # Guard became empty -> drop it.
-                        changed = True
-                        continue
-                    node = cleaned
-                    changed = True
-            new_body.append(node)
-        if not self._hoisted:
-            return updated_node if not changed else updated_node.with_changes(body=new_body)
-        # Deduplicate against existing imports.
-        deduped = _deduplicate_imports(new_body, self._hoisted)
-        if not deduped:
-            return updated_node.with_changes(body=new_body)
-        insert_at = _import_insertion_point(new_body)
-        result = new_body[:insert_at] + deduped + new_body[insert_at:]
-        return updated_node.with_changes(body=result)
-
-
-def _is_main_guard(test: cst.BaseExpression) -> bool:
-    """True when ``test`` is ``__name__ == \"__main__\"`` (either order)."""
-    if not isinstance(test, cst.Comparison):
-        return False
-    # Expect single comparison: left == right (or with parens stripped by CST).
-    if len(test.comparisons) != 1:
-        return False
-    comp = test.comparisons[0]
-    if not isinstance(comp.operator, cst.Equal):
-        return False
-    left = test.left
-    right = comp.comparator
-    # Allow either side to be __name__ / "__main__".
-    def is_dunder_name(n: cst.CSTNode) -> bool:
-        return isinstance(n, cst.Name) and n.value == "__name__"
-    def is_main_str(n: cst.CSTNode) -> bool:
-        return isinstance(n, cst.SimpleString) and n.value.strip("'\"\"") == "__main__"
-    return (is_dunder_name(left) and is_main_str(right)) or (is_dunder_name(right) and is_main_str(left))
-
-
-def _extract_main_imports(node: cst.If) -> tuple[cst.If | None, list[cst.SimpleStatementLine]]:
-    """Extract import lines from a ``__main__`` guard block.
-
-    Returns ``(cleaned_if_or_None, imports)``.  If the guard body becomes
-    empty after extraction, ``None`` is returned to signal removal.
-    """
-    body_stmts: list[cst.BaseStatement] = list(node.body.body)  # type: ignore[union-attr]
-    imports: list[cst.SimpleStatementLine] = []
-    kept: list[cst.BaseStatement] = []
-    for stmt in body_stmts:
-        if isinstance(stmt, cst.SimpleStatementLine) and all(_is_simple_import(s) for s in stmt.body) and stmt.body:
-            for s in stmt.body:
-                imports.append(_flat_import_line(cast(cst.BaseSmallStatement, s)))
-            continue
-        kept.append(stmt)
-    if not imports:
-        return node, []
-    if not kept:
-        return None, imports
-    # If only imports were removed but body still has content, keep the guard.
-    # Strip noqa from hoisted copies (same rationale as other hoisters).
-    deduped_imports = [_strip_noqa_from_line(ln) for ln in imports]
-    return node.with_changes(body=node.body.with_changes(body=kept)), deduped_imports
-
-
 # --------------------------------------------------------- inline import hoist
 
 
@@ -223,7 +135,7 @@ class TypeCheckingRemover(cst.CSTTransformer):
 
 
 class MainBlockImportHoister(cst.CSTTransformer):
-    """Move imports from inside ``if __name__ == \"__main__\":`` to the top.
+    r"""Move imports from inside ``if __name__ == \"__main__\":`` to the top.
 
     Many scripts put a late ``import os`` inside the ``__main__`` guard.
     This hoister extracts those imports, dedupes against the existing
@@ -239,18 +151,17 @@ class MainBlockImportHoister(cst.CSTTransformer):
         body = list(updated_node.body)
         new_body: list[cst.CSTNode] = []
         changed = False
-        for node in body:
-            if isinstance(node, cst.If) and _is_main_guard(node.test):
-                cleaned, imports = _extract_main_imports(node)
+        for stmt in body:
+            if isinstance(stmt, cst.If) and _is_main_guard(stmt.test):
+                cleaned, imports = _extract_main_imports(stmt)
                 if imports:
                     self._hoisted.extend(imports)
-                    if cleaned is None:
-                        # Guard became empty -> drop it.
-                        changed = True
-                        continue
-                    node = cleaned
                     changed = True
-            new_body.append(node)
+                    if cleaned is not None:
+                        new_body.append(cleaned)
+                    # else: guard became empty -> drop it.
+                    continue
+            new_body.append(stmt)
         if not self._hoisted:
             return updated_node if not changed else updated_node.with_changes(body=new_body)
         # Deduplicate against existing imports.
@@ -263,7 +174,7 @@ class MainBlockImportHoister(cst.CSTTransformer):
 
 
 def _is_main_guard(test: cst.BaseExpression) -> bool:
-    """True when ``test`` is ``__name__ == \"__main__\"`` (either order)."""
+    r"""True when ``test`` is ``__name__ == \"__main__\"`` (either order)."""
     if not isinstance(test, cst.Comparison):
         return False
     # Expect single comparison: left == right (or with parens stripped by CST).
@@ -274,11 +185,14 @@ def _is_main_guard(test: cst.BaseExpression) -> bool:
         return False
     left = test.left
     right = comp.comparator
+
     # Allow either side to be __name__ / "__main__".
     def is_dunder_name(n: cst.CSTNode) -> bool:
         return isinstance(n, cst.Name) and n.value == "__name__"
+
     def is_main_str(n: cst.CSTNode) -> bool:
-        return isinstance(n, cst.SimpleString) and n.value.strip("'\"\"") == "__main__"
+        return isinstance(n, cst.SimpleString) and n.evaluated_value == "__main__"
+
     return (is_dunder_name(left) and is_main_str(right)) or (is_dunder_name(right) and is_main_str(left))
 
 
