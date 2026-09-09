@@ -64,11 +64,7 @@ class SectionSorter(cst.CSTTransformer):
             if sec not in section_pos:
                 continue
             later_names_by_section[sec] = {
-                name
-                for name, nsec in name_section.items()
-                if nsec in self._reorder_sections
-                and nsec in section_pos
-                and section_pos[nsec] > section_pos[sec]
+                name for name, nsec in name_section.items() if nsec in self._reorder_sections and nsec in section_pos and section_pos[nsec] > section_pos[sec]
             }
         # When ``from __future__ import annotations`` is active, annotation-only
         # names in ``AnnAssign`` are not evaluated at runtime and must be
@@ -169,5 +165,6 @@ def sort_source(source: str, cfg: Config, *, filename: str = "<unknown>") -> str
 def would_change(source: str, cfg: Config, *, filename: str = "<unknown>") -> bool:
     """True if :func:`sort_source` would alter ``source``."""
     return sort_source(source, cfg, filename=filename) != source
+
 
 __all__ = ["SectionSorter", "sort_source", "would_change"]

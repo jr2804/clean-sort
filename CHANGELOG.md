@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+
 - **`runtime_setup` section**: Module-level assignments to non-constant names
   (``logger = get_logger(__name__)``, ``app = typer.Typer()``) now group into
   a new `runtime_setup` bucket (default order: after `module_constants`)

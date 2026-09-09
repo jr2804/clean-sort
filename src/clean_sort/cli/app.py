@@ -558,7 +558,12 @@ def _run(
     effective_backend = parallel_backend if parallel_backend is not None else cfg.parallel_backend
     if effective_jobs != 0:
         code, changed = _process_files_parallel(
-            files, cfg, mode, cache=cache, jobs=effective_jobs, backend=effective_backend,
+            files,
+            cfg,
+            mode,
+            cache=cache,
+            jobs=effective_jobs,
+            backend=effective_backend,
         )
     else:
         code, changed = _process_files(files, cfg, mode, cache=cache)

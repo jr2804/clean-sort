@@ -146,6 +146,7 @@ def method_type(method: cst.FunctionDef) -> str:
             return "static"
     return "instance"
 
+
 __all__ = [
     "MethodSorter",
     "file_disabled",

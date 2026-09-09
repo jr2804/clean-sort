@@ -99,4 +99,5 @@ def dependency(nodes: list[cst.CSTNode], direction: str) -> list[cst.CSTNode]:
 
     return [nodes[i] for i in order]
 
+
 __all__ = ["alpha", "dependency"]

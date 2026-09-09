@@ -63,7 +63,7 @@ def test_non_export_dunder_stays_module_constants() -> None:
     # module_constants at the top.
     src = '"""doc"""\nimport sys\n\n__version__ = "1.0.0"\n\n\ndef main():\n    pass\n'
     out = sort_source(src, KEEP)
-    assert out.index('__version__') < out.index("def main")
+    assert out.index("__version__") < out.index("def main")
 
 
 def test_typing_imports_before_classes() -> None:
@@ -446,5 +446,3 @@ def test_runtime_setup_referencing_constant_is_safe() -> None:
     """)
     out = sort_source(src, Config())
     assert out.index("MAX_CONN") < out.index("client =")
-
-

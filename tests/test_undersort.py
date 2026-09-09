@@ -191,11 +191,7 @@ def test_per_method_nosort_locks_position() -> None:
     cfg = Config(class_methods_order=["private", "protected", "public"])
     out = sort_source(src, cfg)
     # Order should be pub, __priv (locked), prot.
-    assert (
-        out.index("def pub")
-        < out.index("def __priv")
-        < out.index("def prot")
-    )
+    assert out.index("def pub") < out.index("def __priv") < out.index("def prot")
 
 
 def test_per_method_csort_off_locks_position() -> None:
