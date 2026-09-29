@@ -30,7 +30,6 @@ from pyreorder.migrate import (
     MIGRATE_SENTINEL_FILENAME,
     PER_PROJECT_CACHE_NEW,
     PER_PROJECT_CONFIG_NEW,
-    MigrationReport,
     migrate,
     migrate_if_needed,
     migrate_legacy_cache,
@@ -97,7 +96,7 @@ def test_global_config_rename(fs: Path) -> None:
     old_dir = home / ".config" / "preorder"
     old_dir.mkdir(parents=True)
     (old_dir / "preorder.toml").write_text("# legacy\n", encoding="utf-8")
-    report = migrate_legacy_config(project_root=fs)
+    migrate_legacy_config(project_root=fs)
     new_dir = home / ".config" / GLOBAL_CONFIG_SUBDIR_NEW
     assert (new_dir / GLOBAL_CONFIG_FILENAME_NEW).exists()
     assert (new_dir / GLOBAL_CONFIG_FILENAME_NEW).read_text() == "# legacy\n"
@@ -113,7 +112,7 @@ def test_user_cache_rename(fs: Path) -> None:
     old.mkdir(parents=True)
     (old / "someproject").mkdir()
     (old / "someproject" / "cache.json").write_text("{}", encoding="utf-8")
-    report = migrate_legacy_cache(project_root=fs)
+    migrate_legacy_cache(project_root=fs)
     new = home / ".cache" / CACHE_DIR_NEW
     assert (new / "someproject" / "cache.json").exists()
     assert (new / "someproject" / "cache.json").read_text() == "{}"
@@ -123,7 +122,7 @@ def test_user_cache_rename(fs: Path) -> None:
 def test_project_cache_rename(fs: Path) -> None:
     (fs / ".preorder-cache").mkdir()
     (fs / ".preorder-cache" / "x.json").write_text("x", encoding="utf-8")
-    report = migrate_legacy_cache(project_root=fs)
+    migrate_legacy_cache(project_root=fs)
     assert (fs / PER_PROJECT_CACHE_NEW / "x.json").exists()
     assert not (fs / ".preorder-cache").exists()
 

@@ -51,7 +51,7 @@ import sys
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Literal, TextIO
 
 # === Legacy-to-new rename tables =====================================
 # These are the Jev-confirmed rename targets. The function bodies below
@@ -122,7 +122,7 @@ class MigrationReport:
     def skipped(self) -> list[MigrationResult]:
         return [r for r in self.results if r.action == "skipped"]
 
-    def log(self, *, stream=None) -> None:
+    def log(self, *, stream: TextIO | None = None) -> None:
         stream = stream or sys.stderr
         for r in self.results:
             if r.action != "noop":

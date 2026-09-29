@@ -28,6 +28,8 @@ from json import dumps as _json_dumps
 from pathlib import Path
 from typing import Any, Literal
 
+from pyreorder.migrate import migrate_if_needed
+
 #: Section buckets recognised by the classifier in their canonical order.
 RECOGNIZED_SECTIONS: tuple[str, ...] = (
     "imports",
@@ -388,8 +390,6 @@ def load(
     only cost is one ``stat()`` call on the migration sentinel.
     """
     # Auto-migrate legacy config file / cache paths before discovery.
-    from pyreorder.migrate import migrate_if_needed
-
     migrate_if_needed()
     path = explicit or discover(start)
     if path is None:
