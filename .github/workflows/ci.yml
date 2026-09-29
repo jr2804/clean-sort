@@ -104,6 +104,10 @@ jobs:
       with:
         enable-cache: true
         cache-dependency-glob: pyproject.toml
+    - name: Setup mise
+      uses: jdx/mise-action@v2
+      with:
+        install: true
     - name: Install dependencies
       run: mise dev || uv sync --dev
     - name: Build documentation
