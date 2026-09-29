@@ -1,12 +1,12 @@
-# clean-sort
+# pyreorder
 
-[![status: alpha](https://img.shields.io/badge/status-alpha-orange)](https://codeberg.org/jr2804/clean-sort)
+[![status: alpha](https://img.shields.io/badge/status-alpha-orange)](https://codeberg.org/jr2804/pyreorder)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![python](https://img.shields.io/badge/python-3.11+-blue)](https://www.python.org)
 
 **AST-based Python module reorganizer.**
 
-`csort` reorders the top-level statements of a Python module into a canonical
+`preorder` reorders the top-level statements of a Python module into a canonical
 section layout (imports → globals → constants → classes → functions → `main`)
 and reorders the methods inside each class by visibility and type. It is built
 on [`libcst`](https://github.com/Instagram/LibCST), so comments and formatting
@@ -19,17 +19,17 @@ other sorting tools (isort, undersort, etc.) or provide ruff subcommands.
 ## Install
 
 ```shell
-uv tool install clean-sort
-csort --version
+uv tool install pyreorder
+preorder --version
 ```
 
 ## Quick start
 
 ```shell
-csort run src/                 # sort files in place
-csort check src/               # exit 1 if anything would change (CI / pre-commit)
-csort diff src/                # preview changes
-csort config generate          # write/print a csort.toml template (--with-comments, --with-config)
+preorder run src/                 # sort files in place
+preorder check src/               # exit 1 if anything would change (CI / pre-commit)
+preorder diff src/                # preview changes
+preorder config generate          # write/print a preorder.toml template (--with-comments, --with-config)
 ```
 
 ### Before → after
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     main()
 ```
 
-`csort run` (with `functions = "stepdown"`) produces:
+`preorder run` (with `functions = "stepdown"`) produces:
 
 ```python
 import sys
@@ -82,20 +82,20 @@ if __name__ == "__main__":
 ## Configuration
 
 Discovered from (first wins, walking up from the target file): `--config`,
-`csort.toml`, `.config/csort.toml`, `[tool.csort]` in `pyproject.toml`.
+`preorder.toml`, `.config/preorder.toml`, `[tool.preorder]` in `pyproject.toml`.
 
 ```toml
-[tool.csort.module]
+[tool.preorder.module]
 sections = [
     "imports", "typing_imports", "module_constants", "enums",
     "dataclasses", "classes", "functions", "dunder_exports", "main_block",
 ]
 
-[tool.csort.strategy]            # per-section; omit => "keep"
+[tool.preorder.strategy]            # per-section; omit => "keep"
 enums = "alpha"
 functions = "stepdown"           # "alpha" | "stepdown" | "abstraction" | "keep"
 
-[tool.csort.class_methods]       # undersort-style ordering within each class
+[tool.preorder.class_methods]       # undersort-style ordering within each class
 enabled = true
 order = ["public", "protected", "private"]
 method_type_order = ["instance", "class", "static"]
@@ -113,26 +113,26 @@ method_type_order = ["instance", "class", "static"]
 
 > **Caution:** `alpha` on `module_constants` / `classes` / `dataclasses` can
 > break runtime order (interdependent constants, inheritance). Always preview
-> with `csort diff` first.
+> with `preorder diff` first.
 
 ## Safety model
 
-`csort` is conservative by design:
+`preorder` is conservative by design:
 
 - **Barriers** — statements that don't map to a configured section (runtime
   setup like `app = typer.Typer()`) are never moved. Recognised statements only
-  reorder _within_ their contiguous barrier-free run, so csort never moves code
+  reorder _within_ their contiguous barrier-free run, so preorder never moves code
   across a statement it might depend on.
 - **Pinned** — the module docstring and `from __future__ import ...` always stay
   first.
-- **Opt-out** — a `# csort: off` (or `# nosort`) comment in a file's header
-  skips the file; `class C:  # csort: off` skips that class.
-- **Idempotent** — running `csort` twice never changes a file a second time.
+- **Opt-out** — a `# preorder: off` (or `# nosort`) comment in a file's header
+  skips the file; `class C:  # preorder: off` skips that class.
+- **Idempotent** — running `preorder` twice never changes a file a second time.
 
 ## Programmatic API
 
 ```python
-from clean_sort import sort_source, Config
+from pyreorder import sort_source, Config
 
 cfg = Config(strategies={"functions": "stepdown"})
 sorted_text = sort_source(source_text, cfg)
@@ -142,19 +142,19 @@ sorted_text = sort_source(source_text, cfg)
 
 ```yaml
 repos:
-  - repo: https://codeberg.org/jr2804/clean-sort
+  - repo: https://codeberg.org/jr2804/pyreorder
     rev: v0.1.0
     hooks:
-      - id: csort
+      - id: preorder
 ```
 
 ## Agent skill
 
-An installable agent skill lives in [`skills/clean-sort`](skills/clean-sort).
+An installable agent skill lives in [`skills/pyreorder`](skills/pyreorder).
 Install it for your AI assistant:
 
 ```shell
-bun x skills add https://codeberg.org/jr2804/clean-sort.git -s clean-sort -a universal -y
+bun x skills add https://codeberg.org/jr2804/pyreorder.git -s pyreorder -a universal -y
 ```
 
 ## Development
@@ -173,7 +173,7 @@ The in-class method sorter is an adapted reimplementation of
 function ordering was inspired by [ssort](https://github.com/bwhmather/ssort),
 [sdsort](https://github.com/eirikurt/sdsort) and
 [ABSort](https://github.com/MapleCCC/ABSort). See
-[Credits](https://codeberg.org/jr2804/clean-sort/src/branch/main/docs/credits.md).
+[Credits](https://codeberg.org/jr2804/pyreorder/src/branch/main/docs/credits.md).
 
 ## License
 

@@ -1,4 +1,4 @@
-"""clean-sort — AST-based structural sorter for Python source code.
+"""pyreorder — AST-based structural sorter for Python source code.
 
 Public API:
 

@@ -1,10 +1,10 @@
 [project]
-site_name = "Clean Sort"
+site_name = "Preorder"
 site_description = "AST-based structural sorter for Python source code"
 site_author = "Jan Reimes"
-site_url = "https://Jan Reimes.github.io/clean-sort"
-repo_url = "https://github.com/Jan Reimes/clean-sort"
-repo_name = "Jan Reimes/clean-sort"
+site_url = "https://Jan Reimes.github.io/pyreorder"
+repo_url = "https://github.com/Jan Reimes/pyreorder"
+repo_name = "Jan Reimes/pyreorder"
 copyright = "Copyright &copy; 2026 Jan Reimes"
 nav = [
   { "Home" = [
@@ -86,7 +86,7 @@ link = "https://github.com/Jan Reimes"
 
 [[project.extra.social]]
 icon = "fontawesome/brands/python"
-link = "https://pypi.org/project/clean-sort/"
+link = "https://pypi.org/project/pyreorder/"
 
 [project.extra.analytics.feedback]
 title = "Was this page helpful?"

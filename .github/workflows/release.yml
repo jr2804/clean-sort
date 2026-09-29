@@ -3,8 +3,8 @@
 # (trusted publishing, OIDC) -> create GitHub Release with wheel+sdist.
 #
 # PyPI trusted-publisher setup (one-time, manual):
-#   https://pypi.org/manage/project/clean-sort/publishing/
-#   Owner: jr2804  Repository: jr2804/clean-sort
+#   https://pypi.org/manage/project/pyreorder/publishing/
+#   Owner: jr2804  Repository: jr2804/pyreorder
 #   Workflow filename: release.yml  Workflow name: release
 name: release
 

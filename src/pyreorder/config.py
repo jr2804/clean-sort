@@ -1,11 +1,11 @@
-"""Configuration discovery and parsing for clean-sort.
+"""Configuration discovery and parsing for pyreorder.
 
 Config is read from (first match wins, walking up from the target file):
 
 * ``--config PATH`` (explicit)
-* ``csort.toml`` in the current or any parent directory
-* ``.config/csort.toml`` in the current or any parent directory
-* ``[tool.csort]`` in ``pyproject.toml``
+* ``preorder.toml`` in the current or any parent directory
+* ``.config/preorder.toml`` in the current or any parent directory
+* ``[tool.preorder]`` in ``pyproject.toml``
 
 """
 
@@ -41,7 +41,7 @@ VALID_STRATEGIES: frozenset[str] = frozenset({"keep", "alpha", "stepdown", "abst
 _VALID_VIS = frozenset({"public", "protected", "private"})
 _VALID_MTYPES = frozenset({"instance", "class", "static"})
 
-CSORT_FILES: tuple[str, ...] = ("csort.toml", ".config/csort.toml")
+CSORT_FILES: tuple[str, ...] = ("preorder.toml", ".config/preorder.toml")
 
 
 SectionStrategy = Literal["keep", "alpha", "stepdown", "abstraction"]
@@ -49,7 +49,7 @@ SectionStrategy = Literal["keep", "alpha", "stepdown", "abstraction"]
 
 @dataclass
 class Config:
-    """Resolved clean-sort configuration.
+    """Resolved pyreorder configuration.
 
     Attributes:
         sections: Ordered list of section buckets; top-level statements are
@@ -71,7 +71,7 @@ class Config:
             the top of the module (pre-pass before section sorting).
         remove_type_checking: Delete ``if TYPE_CHECKING:`` guards and hoist the
             imports they contained to the top of the module (pre-pass).
-        fail_on_changed: When ``True`` (default), ``csort run`` exits with code 1
+        fail_on_changed: When ``True`` (default), ``preorder run`` exits with code 1
             when any file was modified. Pre-commit/CI friendly. Set to ``False``
             via ``[cli] fail_on_changed = false`` or ``--no-fail``.
         exclude: Glob patterns to exclude during file discovery (merged with
@@ -82,7 +82,7 @@ class Config:
             whose content hash matches a cached sorted-output hash. Disable
             via ``[cli] cache = false`` or ``--no-cache``.
         cache_dir: Directory storing the content-hash cache. Defaults to
-            ``~/.cache/csort/<project-slug>`` (or ``./.csort-cache/`` when
+            ``~/.cache/preorder/<project-slug>`` (or ``./.preorder-cache/`` when
             configured). Overrides via ``[cli] cache_dir``.
         jobs: Number of parallel workers (0 = serial, negative = auto-detect
             ``int(0.75 * cpu_count())``). Configurable via ``[cli] jobs`` or
@@ -122,15 +122,15 @@ class Config:
         return self.strategies.get(section, "keep")
 
     def config_signature(self) -> str:
-        """Stable hash of the output-affecting fields + csort version.
+        """Stable hash of the output-affecting fields + preorder version.
 
         Used as part of the content-hash cache key. Changes to any field that
-        affects sorted output, or to the csort version, invalidate the cache.
+        affects sorted output, or to the preorder version, invalidate the cache.
         Non-output fields (``fail_on_changed``, ``exclude``, ``recursive``,
         ``unknown_section``, ``cache_*``, ``config_path``) are excluded.
         """
         try:
-            ver = _pkg_version("clean-sort")
+            ver = _pkg_version("pyreorder")
         except PackageNotFoundError:
             ver = "0.0.0"
         relevant = {
@@ -159,7 +159,7 @@ class Config:
         raw: dict[str, Any] | None = None,
         is_pyproject: bool = False,
     ) -> Config:
-        """Build a :class:`Config` from a parsed ``csort`` table."""
+        """Build a :class:`Config` from a parsed ``preorder`` table."""
         cfg = cls(config_path=path)
 
         module = data.get("module", {}) or {}
@@ -177,7 +177,7 @@ class Config:
                     cfg.strategies[name] = value
                 else:
                     warnings.warn(
-                        f"csort: unknown strategy {value!r} for section {name!r}; ignoring",
+                        f"preorder: unknown strategy {value!r} for section {name!r}; ignoring",
                         stacklevel=2,
                     )
 
@@ -199,7 +199,7 @@ class Config:
                     cfg.dunder_exports_names = list(names)
                 else:
                     warnings.warn(
-                        "csort: classification.dunder_exports_names must be a list of strings; ignoring",
+                        "preorder: classification.dunder_exports_names must be a list of strings; ignoring",
                         stacklevel=2,
                     )
 
@@ -224,7 +224,7 @@ class Config:
                     cfg.cache_dir = Path(cache_dir)
                 else:
                     warnings.warn(
-                        "csort: cli.cache_dir must be a string; ignoring",
+                        "preorder: cli.cache_dir must be a string; ignoring",
                         stacklevel=2,
                     )
             if "jobs" in cli:
@@ -233,7 +233,7 @@ class Config:
                     cfg.jobs = jobs
                 else:
                     warnings.warn(
-                        "csort: cli.jobs must be an integer; ignoring",
+                        "preorder: cli.jobs must be an integer; ignoring",
                         stacklevel=2,
                     )
             if "parallel_backend" in cli:
@@ -242,7 +242,7 @@ class Config:
                     cfg.parallel_backend = backend
                 else:
                     warnings.warn(
-                        "csort: cli.parallel_backend must be 'process' or 'thread'; ignoring",
+                        "preorder: cli.parallel_backend must be 'process' or 'thread'; ignoring",
                         stacklevel=2,
                     )
 
@@ -252,7 +252,7 @@ class Config:
                 cfg.cache_ttl_days = ttl
             else:
                 warnings.warn(
-                    "csort: cli.cache_ttl_days must be a non-negative int; ignoring",
+                    "preorder: cli.cache_ttl_days must be a non-negative int; ignoring",
                     stacklevel=2,
                 )
 
@@ -264,7 +264,7 @@ class Config:
                     cfg.exclude = [str(p) for p in exclude]
                 else:
                     warnings.warn(
-                        "csort: discovery.exclude must be a list of strings; ignoring",
+                        "preorder: discovery.exclude must be a list of strings; ignoring",
                         stacklevel=2,
                     )
             if "recursive" in discovery:
@@ -278,13 +278,13 @@ class Config:
         if isinstance(value, list) and value and all(v in valid for v in value):
             setattr(self, attr, list(value))
         elif value is not None:
-            warnings.warn(f"csort: invalid {attr}={value!r}; using default", stacklevel=2)
+            warnings.warn(f"preorder: invalid {attr}={value!r}; using default", stacklevel=2)
             # keep default
 
     def _apply_class_methods(self, cm: dict[str, Any]) -> None:
-        """Apply a ``class_methods`` table (either csort or legacy undersort).
+        """Apply a ``class_methods`` table (either preorder or legacy undersort).
 
-        ``enabled`` is csort-only; the legacy schema predates that key, so it
+        ``enabled`` is preorder-only; the legacy schema predates that key, so it
         defaults to the current value when absent.
         """
         if "enabled" in cm:
@@ -315,7 +315,7 @@ def _legacy_undersort_overrides(data: dict[str, Any], *, is_pyproject: bool) -> 
     * ``[undersort]`` (or ``[tool.undersort]``) inside a standalone config.
 
     Only ``order`` and ``method_type_order`` are part of the legacy schema; an
-    empty result falls through to the csort defaults.
+    empty result falls through to the preorder defaults.
     """
     candidates: list[dict[str, Any]] = []
     if is_pyproject:
@@ -335,18 +335,18 @@ def _read_toml(path: Path) -> dict[str, Any]:
 
 
 def _csort_table_from_data(data: dict[str, Any], *, is_pyproject: bool) -> dict[str, Any]:
-    """Extract the csort config table from parsed TOML data."""
+    """Extract the preorder config table from parsed TOML data."""
     if is_pyproject:
-        return data.get("tool", {}).get("csort", {}) or {}
-    # standalone csort.toml: top-level is the csort config, but tolerate a
-    # [tool.csort] table too.
-    if "csort" in data.get("tool", {}):
-        return data["tool"]["csort"] or {}
+        return data.get("tool", {}).get("preorder", {}) or {}
+    # standalone preorder.toml: top-level is the preorder config, but tolerate a
+    # [tool.preorder] table too.
+    if "preorder" in data.get("tool", {}):
+        return data["tool"]["preorder"] or {}
     return data
 
 
 def discover(start: Path | None = None) -> Path | None:
-    """Walk up from ``start`` (cwd by default) to find a clean-sort config file."""
+    """Walk up from ``start`` (cwd by default) to find a pyreorder config file."""
     base = (start or Path.cwd()).resolve()
     for directory in [base, *base.parents]:
         for rel in CSORT_FILES:
@@ -360,7 +360,7 @@ def discover(start: Path | None = None) -> Path | None:
             except (tomllib.TOMLDecodeError, OSError):
                 continue
             tool = data.get("tool", {})
-            if tool.get("csort"):
+            if tool.get("preorder"):
                 return pyproject
     return None
 
@@ -381,7 +381,7 @@ def load(
     try:
         data = _read_toml(path)
     except tomllib.TOMLDecodeError as exc:
-        warnings.warn(f"csort: could not parse {path}: {exc}; using defaults", stacklevel=2)
+        warnings.warn(f"preorder: could not parse {path}: {exc}; using defaults", stacklevel=2)
         return Config(config_path=path)
 
     is_pyproject = path.name == "pyproject.toml"
@@ -477,7 +477,7 @@ CONFIG_SCHEMA: list[ConfigKey] = [
         "cli",
         "fail_on_changed",
         True,
-        "Exit non-zero when csort run modifies files (pre-commit/CI friendly).",
+        "Exit non-zero when preorder run modifies files (pre-commit/CI friendly).",
     ),
     ConfigKey(
         "cli",
@@ -496,8 +496,8 @@ CONFIG_SCHEMA: list[ConfigKey] = [
     ConfigKey(
         "cli",
         "cache_dir",
-        ".csort-cache",
-        "Cache directory (default: ~/.cache/csort/<project-slug>/cache.json).",
+        ".preorder-cache",
+        "Cache directory (default: ~/.cache/preorder/<project-slug>/cache.json).",
         commented_out=True,
     ),
     ConfigKey(
@@ -533,7 +533,7 @@ CONFIG_SCHEMA: list[ConfigKey] = [
 # ---------------------------------------------------------------------- schema
 # The config schema is the single source of truth for the set of recognized
 # config keys, their defaults, and their documentation. It drives the
-# `generate_config()` template builder (used by `csort config generate`) and
+# `generate_config()` template builder (used by `preorder config generate`) and
 # the validation/drop logic for `--with-config` merges.
 
 
@@ -555,7 +555,7 @@ def generate_config(
     overrides: dict[str, dict[str, Any]] | None = None,
     with_comments: bool = False,
 ) -> str:
-    """Render a csort TOML config string from :data:`CONFIG_SCHEMA`.
+    """Render a preorder TOML config string from :data:`CONFIG_SCHEMA`.
 
     Args:
         overrides: Section-keyed dict of overrides (e.g. from ``--with-config``).
@@ -563,7 +563,7 @@ def generate_config(
         with_comments: When True, emit the explanatory comment line above each key.
     """
     overrides = overrides or {}
-    lines: list[str] = ["# clean-sort configuration. See https://codeberg.org/jr2804/clean-sort", ""]
+    lines: list[str] = ["# pyreorder configuration. See https://codeberg.org/jr2804/pyreorder", ""]
     current_section: str | None = None
     for key in CONFIG_SCHEMA:
         if key.section != current_section:
@@ -586,7 +586,7 @@ def generate_config(
 
 
 def validate_config_keys(data: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], list[str]]:
-    """Split a parsed csort TOML table into (recognized, invalid_paths).
+    """Split a parsed preorder TOML table into (recognized, invalid_paths).
 
     Used by ``--with-config`` to drop unknown/deprecated keys with warnings.
     Returns a dict of section-keyed recognized overrides and a list of

@@ -6,8 +6,8 @@ import json
 import time
 from pathlib import Path
 
-from clean_sort import Config
-from clean_sort.cache import Cache, hash_text
+from pyreorder import Config
+from pyreorder.cache import Cache, hash_text
 
 
 def test_hash_text_deterministic() -> None:

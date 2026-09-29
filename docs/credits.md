@@ -6,8 +6,8 @@ hide:
 
 ## Acknowledgements
 
-clean-sort builds on ideas from several Python sorting tools. The in-class
-method sorter (`clean_sort.undersort`) is an adapted reimplementation of
+pyreorder builds on ideas from several Python sorting tools. The in-class
+method sorter (`pyreorder.undersort`) is an adapted reimplementation of
 **[undersort](https://github.com/kivicode/undersort)** by Kivikood (MIT) —
 class-method ordering by visibility and method type, including the `# nosort`
 opt-out directive.

@@ -1,11 +1,11 @@
 # Codeberg canonical-home banner
 
 The Codeberg README should carry a banner pointing at the GitHub canonical
-home. Drop this block at the top of `codeberg.org/jr2804/clean-sort/README.md`:
+home. Drop this block at the top of `codeberg.org/jr2804/pyreorder/README.md`:
 
 ```markdown
 > **This repository has moved.**
-> The canonical home is now **github.com/jr2804/clean-sort**.
+> The canonical home is now **github.com/jr2804/pyreorder**.
 > This Codeberg mirror is kept read-only and synced from GitHub every 8 hours.
 > Please file issues and open PRs on GitHub.
 ```

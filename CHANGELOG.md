@@ -11,13 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Documentation overhaul**: New `Architecture` page with two Mermaid
   pipeline diagrams (per-stage data flow and per-file work decomposition);
-  new `Comparison with other tools` page positioning `csort` against
+  new `Comparison with other tools` page positioning `preorder` against
   `isort`, Ruff `I001`, `undersort`, `ssort`, `sdsort`, and `ABSort`
   (with verified references to each tool's documented behavior);
   new `Architecture Decision Records` directory under `docs/adr/` with
   three ADRs covering the libcst parser choice (0001), the
   forward-reference barrier rule (0002), and the `stepdown` default
   strategy (0003).
+
+
+- **Project rename**: clean-sort → pyreorder. New PyPI package name is
+  `pyreorder` (the `clean-sort` name is unreservable due to PyPI's
+  ultranormalization filter colliding with the existing `cleansort`
+  project). The CLI command is now `preorder`; the import name is
+  `pyreorder`; the source dir is `src/pyreorder/`. The skill is renamed
+  from `clean-sort` to `pyreorder`. The legacy `[tool.csort]` config
+  table is still honoured as a back-compat alias for `[tool.preorder]`.
 
 - **`runtime_setup` section**: Module-level assignments to non-constant names
   (``logger = get_logger(__name__)``, ``app = typer.Typer()``) now group into
@@ -27,22 +36,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   to cover `runtime_setup` assignments, preventing `NameError` for
   assignments that reference later-defined names.
 
-- **`csort config generate` subcommand**: produces a csort.toml template from
+- **`preorder config generate` subcommand**: produces a preorder.toml template from
   the current config schema. Supports `--output FILE` (must end in `.toml`),
   `--with-comments` (explanatory comments for each setting), and `--with-config
   FILE` (merges recognized values from an existing config; invalid/deprecated
   keys are dropped with warnings). The schema is now the single source of truth
-  for recognized config keys. Replaces the old `csort config init`.
+  for recognized config keys. Replaces the old `preorder config init`.
 
-- **Content-hash skip cache**: csort now caches sorted-output hashes keyed by
+- **Content-hash skip cache**: preorder now caches sorted-output hashes keyed by
   ``(config_signature, source_hash)``. On repeat runs, files whose content hash
   matches the cached sorted hash are skipped entirely (no parse, no sort).
-  Default location: ``~/.cache/csort/<project-slug>/cache.json``. Configurable
+  Default location: ``~/.cache/preorder/<project-slug>/cache.json``. Configurable
   via ``[cli] cache_dir``; disabled via ``[cli] cache = false`` or
   ``--no-cache``. Safe by construction: only skips files already in sorted
   state.
 
-- **Parallel file processing**: csort can sort files in parallel using a
+- **Parallel file processing**: preorder can sort files in parallel using a
   process pool (``parallel_backend = "process"``, default) or thread pool
   (``"thread"``). Configure via ``[cli] jobs`` (0 = serial, negative = auto
   ``int(0.75*cpu_count())``) or ``--jobs``/``-j`` per-invocation. Stdin mode
@@ -53,9 +62,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   flags) and `recursive` (bool, default `true`; `--no-recursive` overrides).
 
 - **`--fail` / `--no-fail` CLI flag and `[cli] fail_on_changed` config**: Control whether
-  `csort run` exits non-zero when files are modified. Default remains exit 1 on change
+  `preorder run` exits non-zero when files are modified. Default remains exit 1 on change
   (pre-commit/CI friendly); `--no-fail` (or `[cli] fail_on_changed = false`) exits 0, useful
-  when running csort from a formatter task that always writes. `csort check` is unaffected.
+  when running preorder from a formatter task that always writes. `preorder check` is unaffected.
 
 ### Fixed
 

@@ -20,7 +20,7 @@ from pathlib import Path
 import libcst as cst
 import pytest
 
-from clean_sort import Config, sort_source
+from pyreorder import Config, sort_source
 
 _DATA = Path(__file__).parent / "data"
 

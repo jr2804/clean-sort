@@ -76,4 +76,4 @@ docstring-code-format = true
 docstring-code-line-length = 160
 
 [lint.isort]
-known-first-party = ["clean_sort"]
+known-first-party = ["pyreorder"]

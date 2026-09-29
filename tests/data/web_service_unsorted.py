@@ -1,9 +1,9 @@
-"""A small HTTP client library — realistic module for csort examples.
+"""A small HTTP client library — realistic module for preorder examples.
 
 This file is intentionally out of order. Run::
 
-    csort diff tests/data/web_service_unsorted.py
-    csort run  tests/data/web_service_unsorted.py
+    preorder diff tests/data/web_service_unsorted.py
+    preorder run  tests/data/web_service_unsorted.py
 
 to see section reordering, stepdown function sorting, and in-class method
 ordering (undersort) in action.
@@ -20,7 +20,7 @@ LOGGER = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 30
 MAX_RETRIES = 3
-USER_AGENT = "clean-sort-demo/1.0"
+USER_AGENT = "pyreorder-demo/1.0"
 
 
 class HttpStatus(enum.IntEnum):

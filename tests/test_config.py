@@ -6,7 +6,7 @@ import textwrap
 import warnings
 from pathlib import Path
 
-from clean_sort import Config, discover, load_config
+from pyreorder import Config, discover, load_config
 
 
 def test_defaults() -> None:
@@ -31,7 +31,7 @@ def test_invalid_strategy_warns() -> None:
 
 def test_load_pyproject(tmp_path: Path) -> None:
     (tmp_path / "pyproject.toml").write_text(
-        '[tool.csort.module]\nsections = ["functions", "imports"]\n[tool.csort.strategy]\nfunctions = "alpha"\n',
+        '[tool.preorder.module]\nsections = ["functions", "imports"]\n[tool.preorder.strategy]\nfunctions = "alpha"\n',
         encoding="utf-8",
     )
     cfg = load_config(start=tmp_path)
@@ -42,16 +42,16 @@ def test_load_pyproject(tmp_path: Path) -> None:
 
 
 def test_load_standalone_csort_toml(tmp_path: Path) -> None:
-    (tmp_path / "csort.toml").write_text('[module]\nsections = ["classes"]\n', encoding="utf-8")
+    (tmp_path / "preorder.toml").write_text('[module]\nsections = ["classes"]\n', encoding="utf-8")
     cfg = load_config(start=tmp_path)
     assert cfg.sections == ["classes"]
     assert cfg.config_path
-    assert cfg.config_path.name == "csort.toml"
+    assert cfg.config_path.name == "preorder.toml"
 
 
 def test_load_dotconfig(tmp_path: Path) -> None:
     (tmp_path / ".config").mkdir()
-    (tmp_path / ".config" / "csort.toml").write_text("[class_methods]\nenabled = false\n", encoding="utf-8")
+    (tmp_path / ".config" / "preorder.toml").write_text("[class_methods]\nenabled = false\n", encoding="utf-8")
     cfg = load_config(start=tmp_path)
     assert cfg.class_methods_enabled is False
 
@@ -59,15 +59,15 @@ def test_load_dotconfig(tmp_path: Path) -> None:
 def test_discover_walks_up(tmp_path: Path) -> None:
     sub = tmp_path / "pkg" / "mod"
     sub.mkdir(parents=True)
-    (tmp_path / "csort.toml").write_text('[module]\nsections = ["x"]\n', encoding="utf-8")
+    (tmp_path / "preorder.toml").write_text('[module]\nsections = ["x"]\n', encoding="utf-8")
     found = discover(sub)
     assert found
-    assert found.name == "csort.toml"
+    assert found.name == "preorder.toml"
 
 
 def test_explicit_overrides_discovery(tmp_path: Path) -> None:
-    (tmp_path / "pyproject.toml").write_text('[tool.csort.module]\nsections = ["functions"]\n', encoding="utf-8")
-    explicit = tmp_path / "csort.toml"
+    (tmp_path / "pyproject.toml").write_text('[tool.preorder.module]\nsections = ["functions"]\n', encoding="utf-8")
+    explicit = tmp_path / "preorder.toml"
     explicit.write_text('[module]\nsections = ["classes"]\n', encoding="utf-8")
     cfg = load_config(explicit=explicit)
     assert cfg.sections == ["classes"]
@@ -80,7 +80,7 @@ def test_no_config_returns_defaults(tmp_path: Path) -> None:
 
 
 def test_transforms_table_parsed(tmp_path: Path) -> None:
-    (tmp_path / "csort.toml").write_text(
+    (tmp_path / "preorder.toml").write_text(
         "[transforms]\nhoist_inline_imports = true\nremove_type_checking = true\n",
         encoding="utf-8",
     )
@@ -97,7 +97,7 @@ def test_transforms_default_off() -> None:
 
 # ------------------------------------------------------------ legacy [tool.undersort]
 def test_legacy_tool_undersort_pyproject(tmp_path: Path) -> None:
-    # pyproject.toml spelling of the legacy config is honoured when the csort
+    # pyproject.toml spelling of the legacy config is honoured when the preorder
     # class_methods table is absent.
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
@@ -117,8 +117,8 @@ def test_legacy_tool_undersort_pyproject(tmp_path: Path) -> None:
 
 
 def test_legacy_top_level_undersort_csort_toml(tmp_path: Path) -> None:
-    # Standalone csort.toml also accepts a top-level [undersort] table.
-    csort_toml = tmp_path / "csort.toml"
+    # Standalone preorder.toml also accepts a top-level [undersort] table.
+    csort_toml = tmp_path / "preorder.toml"
     csort_toml.write_text(
         textwrap.dedent(
             """\
@@ -134,13 +134,13 @@ def test_legacy_top_level_undersort_csort_toml(tmp_path: Path) -> None:
 
 
 def test_csort_class_methods_wins_over_legacy(tmp_path: Path) -> None:
-    # When both tables exist the csort one (closer, scoped to class_methods)
+    # When both tables exist the preorder one (closer, scoped to class_methods)
     # takes precedence.
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
         textwrap.dedent(
             """\
-            [tool.csort.class_methods]
+            [tool.preorder.class_methods]
             order = ["public", "protected", "private"]
 
             [tool.undersort]
@@ -175,7 +175,7 @@ def test_legacy_invalid_order_warns(tmp_path: Path) -> None:
 
 
 def test_discovery_exclude_and_recursive(tmp_path: Path) -> None:
-    cfg_file = tmp_path / "csort.toml"
+    cfg_file = tmp_path / "preorder.toml"
     cfg_file.write_text(
         textwrap.dedent(
             """\
@@ -192,7 +192,7 @@ def test_discovery_exclude_and_recursive(tmp_path: Path) -> None:
 
 
 def test_discovery_defaults_when_absent(tmp_path: Path) -> None:
-    cfg_file = tmp_path / "csort.toml"
+    cfg_file = tmp_path / "preorder.toml"
     cfg_file.write_text('[strategy]\nfunctions = "alpha"\n', encoding="utf-8")
     cfg = load_config(explicit=cfg_file)
     assert cfg.exclude == []
@@ -200,7 +200,7 @@ def test_discovery_defaults_when_absent(tmp_path: Path) -> None:
 
 
 def test_discovery_invalid_exclude_warns(tmp_path: Path) -> None:
-    cfg_file = tmp_path / "csort.toml"
+    cfg_file = tmp_path / "preorder.toml"
     cfg_file.write_text(
         textwrap.dedent(
             """\
@@ -221,7 +221,7 @@ def test_discovery_invalid_exclude_warns(tmp_path: Path) -> None:
 
 
 def test_classification_dunder_exports_names_parsed(tmp_path: Path) -> None:
-    cfg_file = tmp_path / "csort.toml"
+    cfg_file = tmp_path / "preorder.toml"
     cfg_file.write_text(
         textwrap.dedent(
             """\
@@ -240,7 +240,7 @@ def test_classification_dunder_exports_names_default() -> None:
 
 
 def test_classification_invalid_dunder_exports_names_warns(tmp_path: Path) -> None:
-    cfg_file = tmp_path / "csort.toml"
+    cfg_file = tmp_path / "preorder.toml"
     cfg_file.write_text(
         textwrap.dedent(
             """\

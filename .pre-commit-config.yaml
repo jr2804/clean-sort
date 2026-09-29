@@ -9,10 +9,10 @@
 repos:
   - repo: local
     hooks:
-      - id: csort
-        name: csort
+      - id: preorder
+        name: preorder
         description: AST-based structural sorter (this repo).
-        entry: uv run csort run --
+        entry: uv run preorder run --
         language: system
         files: ^src/.*\.py$
         pass_filenames: true

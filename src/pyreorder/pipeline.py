@@ -22,7 +22,7 @@ class SectionSorter(cst.CSTTransformer):
     Safety model: statements whose section is not listed in ``Config.sections``
     (notably unrecognised runtime setup such as ``app = typer.Typer()``) act as
     *barriers* and never move. Recognised statements only reorder within their
-    contiguous barrier-free run, so csort never moves code across a setup
+    contiguous barrier-free run, so preorder never moves code across a setup
     statement it might depend on. The module docstring and ``from __future__``
     imports are pinned at the top (Python requires ``__future__`` first).
     """
@@ -148,7 +148,7 @@ def sort_source(source: str, cfg: Config, *, filename: str = "<unknown>") -> str
     """Return ``source`` sorted according to ``cfg``.
 
     1. parse with libcst;
-    2. bail out untouched if the file is disabled (``# csort: off`` header);
+    2. bail out untouched if the file is disabled (``# preorder: off`` header);
     3. reorder top-level statements by section;
     4. (optional) reorder methods within each class.
     """

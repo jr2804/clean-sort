@@ -22,7 +22,7 @@ file with a **sample-specific config** (see the `SAMPLES` list in
 
 ```python
 from pathlib import Path
-from clean_sort import Config, sort_source
+from pyreorder import Config, sort_source
 
 samples = [
     ("web_service", Config(strategies={"functions": "stepdown"})),
@@ -36,5 +36,5 @@ for name, cfg in samples:
     Path(f"tests/data/{name}_sorted.py").write_text(sort_source(src, cfg), encoding="utf-8")
 ```
 
-Every `*_sorted.py` file is idempotent: running csort on it again changes
+Every `*_sorted.py` file is idempotent: running preorder on it again changes
 nothing.

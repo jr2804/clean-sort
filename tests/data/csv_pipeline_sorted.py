@@ -1,10 +1,10 @@
-"""CSV import + validation pipeline — realistic module for csort examples.
+"""CSV import + validation pipeline — realistic module for preorder examples.
 
 This file is intentionally out of order and contains *barriers* (module-level
-runtime setup statements that csort will not move). Run::
+runtime setup statements that preorder will not move). Run::
 
-    csort diff tests/data/csv_pipeline_unsorted.py
-    csort run  tests/data/csv_pipeline_unsorted.py
+    preorder diff tests/data/csv_pipeline_unsorted.py
+    preorder run  tests/data/csv_pipeline_unsorted.py
 
 Observe that ``_VALIDATORS`` and ``register_validator(...)`` stay in place
 relative to each other because the call is a barrier.
@@ -33,7 +33,7 @@ REQUIRED_COLUMNS = ("name", "email", "age")
 
 # --- runtime setup: a registry of validators ---------------------------------
 # ``_VALIDATORS`` and the ``register_validator`` calls below form a *barrier
-# group*: csort will not reorder ``_VALIDATORS`` past the calls that populate
+# group*: preorder will not reorder ``_VALIDATORS`` past the calls that populate
 # it, because the calls depend on it at import time.
 _VALIDATORS: dict[str, Callable[[str], ValidationIssue | None]] = {}
 

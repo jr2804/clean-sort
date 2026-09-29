@@ -79,7 +79,7 @@ jobs:
     - name: Install dependencies
       run: mise dev || uv sync --dev
     - name: Run tests with coverage
-      run: mise test || pytest --cov=clean_sort --cov-report=term-missing --cov-report=xml
+      run: mise test || pytest --cov=pyreorder --cov-report=term-missing --cov-report=xml
     - name: Upload coverage artifact
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
       uses: actions/upload-artifact@v4

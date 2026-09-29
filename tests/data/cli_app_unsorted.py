@@ -1,14 +1,14 @@
-"""A tiny Typer CLI — realistic module for csort examples.
+"""A tiny Typer CLI — realistic module for preorder examples.
 
 This file demonstrates the most important real-world gotcha: module-level
 runtime setup (``app = typer.Typer()`` and the ``@app.command()`` decorators)
-forms a *barrier*. csort recognises it cannot move the decorated functions away
+forms a *barrier*. preorder recognises it cannot move the decorated functions away
 from ``app``, so they stay grouped below it.
 
 Run::
 
-    csort diff tests/data/cli_app_unsorted.py
-    csort run  tests/data/cli_app_unsorted.py
+    preorder diff tests/data/cli_app_unsorted.py
+    preorder run  tests/data/cli_app_unsorted.py
 """
 
 from __future__ import annotations

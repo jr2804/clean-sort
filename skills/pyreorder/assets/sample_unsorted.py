@@ -1,7 +1,7 @@
-"""Sample unsorted module for `csort` demonstrations.
+"""Sample unsorted module for `preorder` demonstrations.
 
-Try:   csort diff assets/sample_unsorted.py
-       csort run assets/sample_unsorted.py
+Try:   preorder diff assets/sample_unsorted.py
+       preorder run assets/sample_unsorted.py
 """
 
 import sys

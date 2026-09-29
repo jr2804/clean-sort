@@ -4,7 +4,7 @@ title: Architecture
 
 # Architecture
 
-`csort` reorganizes a Python module without changing what it does. The work is
+`preorder` reorganizes a Python module without changing what it does. The work is
 done by a small pipeline of pure functions over a `libcst.Module` tree. Each
 stage is independently testable; the only state that survives across files is
 the on-disk content-hash cache.
@@ -51,11 +51,11 @@ The stages are:
 
 ## Safety model
 
-`csort` does not change semantics — only statement order. Three invariants make
+`preorder` does not change semantics — only statement order. Three invariants make
 that possible:
 
 1. **Formatting-preserving parse.** `libcst` keeps parentheses, quote styles,
-   and comments intact. Round-tripping a file through `csort` without changes
+   and comments intact. Round-tripping a file through `preorder` without changes
    is byte-identical to the input.
 2. **Forward-reference barriers.** A statement that references a name defined
    in a later configured section is treated as a barrier: it stays where it is.
@@ -63,9 +63,9 @@ that possible:
    first use. See [ADR 0002](adr/0002-forward-reference-barriers.md).
 3. **Unrecognised sections are barriers too.** Statements whose section is
    absent from `Config.sections` (e.g. `app = typer.Typer()`) never move.
-   `csort` errs on the side of leaving unfamiliar code alone.
+   `preorder` errs on the side of leaving unfamiliar code alone.
 
-The combination means `csort` is safe to run on a module it has never seen:
+The combination means `preorder` is safe to run on a module it has never seen:
 if it can't classify a statement, it doesn't touch the surrounding block.
 
 ## Where the work happens
@@ -97,7 +97,7 @@ flowchart TB
     style C2 fill:#f3e5f5
 ```
 
-Files are independent — the `parallel` execution backend (`csort --jobs N`)
+Files are independent — the `parallel` execution backend (`preorder --jobs N`)
 shells out one process per file. Within a file, the four stages share a single
 `libcst.Module` object, so they run sequentially.
 
@@ -107,7 +107,7 @@ The pipeline is exposed through one entry point: `sort_source` in
 `pipeline.py`. The Typer CLI (`cli/app.py`) is a thin wrapper that handles
 configuration loading, file discovery, and parallelism. There is no stable
 scripting API beyond `sort_source`; downstream tools should shell out to the
-`csort` CLI to inherit future improvements.
+`preorder` CLI to inherit future improvements.
 
 ## Why this shape
 

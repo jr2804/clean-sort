@@ -1,11 +1,11 @@
 ---
-name: clean-sort
-description: clean-sort (`csort`) is an AST/CST-based structural sorter for Python source code. Use when the user wants to "sort", "reorder", "organize", or "clean up" the structure of Python files — grouping imports, constants, enums, dataclasses, classes, functions, and the `if __name__ == "__main__"` block into a canonical order; alphabetising or dependency-ordering functions (step-down rule); or reordering class methods by visibility (public/protected/private) and type (instance/class/static) like undersort. Triggers include "sort this module", "organize my python code", "put imports at the top", "step-down order my functions", "undersort this class", "sort methods by visibility", or running `csort`. Prefer over manual reordering or over isort/ruff when the goal is *structural* (statement-level) ordering rather than import-only or formatting.
+name: pyreorder
+description: pyreorder (`preorder`) is an AST/CST-based structural sorter for Python source code. Use when the user wants to "sort", "reorder", "organize", or "clean up" the structure of Python files — grouping imports, constants, enums, dataclasses, classes, functions, and the `if __name__ == "__main__"` block into a canonical order; alphabetising or dependency-ordering functions (step-down rule); or reordering class methods by visibility (public/protected/private) and type (instance/class/static) like undersort. Triggers include "sort this module", "organize my python code", "put imports at the top", "step-down order my functions", "undersort this class", "sort methods by visibility", or running `preorder`. Prefer over manual reordering or over isort/ruff when the goal is *structural* (statement-level) ordering rather than import-only or formatting.
 ---
 
-# clean-sort (`csort`)
+# pyreorder (`preorder`)
 
-`csort` reorders the **top-level statements** of a Python module into a
+`preorder` reorders the **top-level statements** of a Python module into a
 configurable section order and the **methods within each class** by visibility
 and type. It is built on `libcst`, so comments and formatting are preserved. It
 is a _structural_ sorter — it complements `ruff`/`isort` (imports) and `black`
@@ -14,8 +14,8 @@ is a _structural_ sorter — it complements `ruff`/`isort` (imports) and `black`
 ## Install
 
 ```shell
-uv tool install clean-sort                 # or: git+https://codeberg.org/jr2804/clean-sort
-csort --version
+uv tool install pyreorder                 # or: git+https://codeberg.org/jr2804/pyreorder
+preorder --version
 ```
 
 ## When to use
@@ -26,21 +26,21 @@ csort --version
   low-level-utilities-first (**abstraction**).
 - You want class methods grouped public → protected → private, instance → class
   → static (undersort semantics).
-- CI / pre-commit gate: `csort check` exits non-zero if files aren't sorted.
+- CI / pre-commit gate: `preorder check` exits non-zero if files aren't sorted.
 
-Do **not** use csort for import-only sorting (use `ruff`/`isort`) or for
-formatting (use `ruff format`/`black`). csort composes with both — run it
+Do **not** use preorder for import-only sorting (use `ruff`/`isort`) or for
+formatting (use `ruff format`/`black`). preorder composes with both — run it
 _after_ formatters.
 
 ## CLI
 
 ```shell
-csort run [PATHS...]            # sort in place (use `-` for stdin -> stdout)
-csort check [PATHS...]          # exit 1 if any file would change (CI / pre-commit)
-csort diff [PATHS...]           # print unified diffs
-csort config generate [--output FILE] [--with-comments] [--with-config FILE]  # produce a config template (merge from existing)
-csort config show               # print resolved config
-csort --version
+preorder run [PATHS...]            # sort in place (use `-` for stdin -> stdout)
+preorder check [PATHS...]          # exit 1 if any file would change (CI / pre-commit)
+preorder diff [PATHS...]           # print unified diffs
+preorder config generate [--output FILE] [--with-comments] [--with-config FILE]  # produce a config template (merge from existing)
+preorder config show               # print resolved config
+preorder --version
 ```
 
 Common options: `--config PATH`, `--exclude/-x GLOB`, `--no-recursive`,
@@ -49,13 +49,13 @@ Common options: `--config PATH`, `--exclude/-x GLOB`, `--no-recursive`,
 
 ```shell
 # editor / pre-commit friendly:
-csort run - < module.py > sorted.py
+preorder run - < module.py > sorted.py
 ```
 
 ## Configuration
 
-Discovered from (first wins, walking up): `--config`, `csort.toml`,
-`.config/csort.toml`, `[tool.csort]` in `pyproject.toml`. `[tool.undersort]` is
+Discovered from (first wins, walking up): `--config`, `preorder.toml`,
+`.config/preorder.toml`, `[tool.preorder]` in `pyproject.toml`. `[tool.undersort]` is
 read for backwards-compatibility class-method ordering.
 
 ```toml
@@ -84,22 +84,22 @@ method_type_order = ["instance", "class", "static"]
 
 > **Caution:** `alpha` on `module_constants`/`classes`/`dataclasses` can break
 > runtime order (constants that reference each other; inheritance). Always
-> preview with `csort diff` before applying.
+> preview with `preorder diff` before applying.
 
 ## Safety model
 
-csort is conservative:
+preorder is conservative:
 
 - **Barriers:** statements that don't map to a configured section (e.g.
   `app = typer.Typer()`, runtime setup) are never moved. Recognised statements
-  only reorder _within_ their contiguous barrier-free run, so csort never moves
+  only reorder _within_ their contiguous barrier-free run, so preorder never moves
   code across a statement it might depend on.
 - **Pinned:** the module docstring and `from __future__ import ...` always stay
   first.
-- **Opt-out:** a `# csort: off` (or `# nosort`) comment in a file's header
+- **Opt-out:** a `# preorder: off` (or `# nosort`) comment in a file's header
   skips the file; the same comment on a class trailing line
-  (`class C:  # csort: off`) skips that class.
-- **Idempotent:** running `csort` twice never changes a file a second time.
+  (`class C:  # preorder: off`) skips that class.
+- **Idempotent:** running `preorder` twice never changes a file a second time.
 
 ## Opt-in import transforms
 
@@ -153,7 +153,7 @@ stripped — the suppression was only justified by the TYPE_CHECKING guard.
 ## Programmatic API
 
 ```python
-from clean_sort import sort_source, Config
+from pyreorder import sort_source, Config
 
 cfg = Config(strategies={"functions": "stepdown"})
 sorted_text = sort_source(source_text, cfg)
@@ -175,6 +175,6 @@ committed sorted output) live in `tests/data/` and demonstrate every strategy:
 | `inventory_models` | `alpha`       | alpha on enums + functions, rich undersort in one class |
 
 ```shell
-csort diff tests/data/plugin_registry_unsorted.py
-csort diff tests/data/inventory_models_unsorted.py
+preorder diff tests/data/plugin_registry_unsorted.py
+preorder diff tests/data/inventory_models_unsorted.py
 ```

@@ -6,13 +6,13 @@ Searched in order (first match wins, walking up from the target file's
 directory):
 
 1. `--config PATH` (explicit)
-2. `csort.toml`
-3. `.config/csort.toml`
-4. `[tool.csort]` in `pyproject.toml`
+2. `preorder.toml`
+3. `.config/preorder.toml`
+4. `[tool.preorder]` in `pyproject.toml`
 
 `[tool.undersort]` (in `pyproject.toml`) is read as a fallback for
 `class_methods.order` / `class_methods.method_type_order` when
-`[tool.csort.class_methods]` is absent.
+`[tool.preorder.class_methods]` is absent.
 
 ## Schema
 
@@ -70,8 +70,8 @@ position. Visibility: `public` (no underscore, and dunders like `__init__`),
 
 ## Opt-out directives
 
-- File: a `# csort: off` or `# nosort` comment in the module header → file skipped.
-- Class: `class C:  # csort: off` (trailing) → that class's methods untouched.
+- File: a `# preorder: off` or `# nosort` comment in the module header → file skipped.
+- Class: `class C:  # preorder: off` (trailing) → that class's methods untouched.
 
 ## Opt-in import transforms (`[transforms]`)
 

@@ -5,7 +5,7 @@ project structure or tooling changes significantly.
 
 ## Project
 
-clean-sort — an AST-based Python module reorganizer that deterministically groups
+pyreorder — an AST-based Python module reorganizer that deterministically groups
 imports/globals/constants/classes/methods into the correct order. Full docs at
 `README.md` and `docs/`.
 
@@ -14,7 +14,7 @@ imports/globals/constants/classes/methods into the correct order. Full docs at
 ```bash
 uv run pytest      # run the test suite
 uv build           # build wheel + sdist
-csort check .      # verify files are already sorted
+preorder check .      # verify files are already sorted
 mise format-md     # format/lint markdown
 ```
 
@@ -25,18 +25,18 @@ mise format-md     # format/lint markdown
 | `AGENTS.md` | Root rail — rules + `.agents/` index |
 | `.agents/POLICIES.md` | Boundaries, priorities, verification |
 | `.agents/FILES.md` | Source-of-truth locations |
-| `src/clean_sort/__init__.py` | Public API (`sort_source`, `Config`, `load_config`) |
+| `src/pyreorder/__init__.py` | Public API (`sort_source`, `Config`, `load_config`) |
 
 ## Where to dig deeper
 
 - `docs/` — user-facing documentation
 - `.agents/HISTORY.md` — past decisions and rationale
-- `src/clean_sort/AGENTS.md` — package-local contracts
+- `src/pyreorder/AGENTS.md` — package-local contracts
 - `tests/AGENTS.md` — testing conventions
 
 ## Available tools
 
-- **csort** — reorganize Python modules (CLI + `clean_sort` API)
+- **preorder** — reorganize Python modules (CLI + `pyreorder` API)
 - **mise / uv** — task running, env, build, format, lint
 - **codegraph** — symbol search, call graphs
 - **grepai** — find code by intent

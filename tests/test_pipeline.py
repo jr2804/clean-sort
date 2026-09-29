@@ -6,7 +6,7 @@ import textwrap
 
 import libcst as cst
 
-from clean_sort import Config, sort_source, would_change
+from pyreorder import Config, sort_source, would_change
 
 KEEP = Config()  # within-section order preserved by default
 
@@ -177,12 +177,12 @@ def test_method_type_ordering() -> None:
 
 # ----------------------------------------------------------------- directives
 def test_file_disable_directive() -> None:
-    src = "# csort: off\ndef b():\n    pass\ndef a():\n    pass\n"
+    src = "# preorder: off\ndef b():\n    pass\ndef a():\n    pass\n"
     assert sort_source(src, Config(strategies={"functions": "alpha"})) == src
 
 
 def test_class_disable_trailing_comment() -> None:
-    src = "class C:  # csort: off\n    def _prot(self):\n        pass\n    def pub(self):\n        pass\n"
+    src = "class C:  # preorder: off\n    def _prot(self):\n        pass\n    def pub(self):\n        pass\n"
     out = sort_source(src, KEEP)
     assert out.index("def _prot") < out.index("def pub")
 

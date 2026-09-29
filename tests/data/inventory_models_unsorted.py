@@ -1,4 +1,4 @@
-"""Inventory domain models — realistic module for csort examples.
+"""Inventory domain models — realistic module for preorder examples.
 
 This file showcases two features working together:
 
@@ -7,12 +7,12 @@ This file showcases two features working together:
   preserve.
 * **Rich undersort** — the ``Product`` class contains methods spanning every
   visibility (public / protected / private) and type (instance / class /
-  static), so csort's in-class reordering is easy to see.
+  static), so preorder's in-class reordering is easy to see.
 
 Run::
 
-    csort diff tests/data/inventory_models_unsorted.py
-    csort run  tests/data/inventory_models_unsorted.py
+    preorder diff tests/data/inventory_models_unsorted.py
+    preorder run  tests/data/inventory_models_unsorted.py
 
 The authoritative output (``inventory_models_sorted.py``) was generated with
 ``Config(strategies={"enums": "alpha", "functions": "alpha"})``.

@@ -8,7 +8,7 @@ This module is an adapted reimplementation of `undersort` by Kivikood
 It reorders the methods of each class by visibility (public, protected,
 private) and then by method type (instance, class, static), preserving the
 original relative order within each group. Non-method statements keep their
-leading/trailing position. ``# nosort`` (undersort) and ``# csort: off``
+leading/trailing position. ``# nosort`` (undersort) and ``# preorder: off``
 comments on a class opt that class out.
 
 Compared to upstream, the within-group reordering was simplified to a plain
@@ -23,7 +23,7 @@ import libcst as cst
 
 _ALL_VIS = ("public", "protected", "private")
 _ALL_MTYPES = ("instance", "class", "static")
-_DISABLE_MARKERS = ("csort: off", "nosort")
+_DISABLE_MARKERS = ("preorder: off", "nosort")
 
 
 class MethodSorter(cst.CSTTransformer):
@@ -103,7 +103,7 @@ def _comment_disabled(comment_text: str | None) -> bool:
 
 
 def has_disable_comment(node: cst.FunctionDef | cst.ClassDef) -> bool:
-    """True if a class/method carries a ``# csort: off`` / ``# nosort`` comment."""
+    """True if a class/method carries a ``# preorder: off`` / ``# nosort`` comment."""
     for line in getattr(node, "leading_lines", ()) or ():
         if isinstance(line, cst.EmptyLine) and _comment_disabled(line.comment and line.comment.value):
             return True

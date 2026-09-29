@@ -89,11 +89,11 @@ When the user requests a durable behavior change, record it here or in the relev
 
 ### Child DOX Index
 
-- `src/clean_sort/` — primary package: AST-based module reorganization (`src/clean_sort/AGENTS.md`)
+- `src/pyreorder/` — primary package: AST-based module reorganization (`src/pyreorder/AGENTS.md`)
 - `tests/` — pytest suite and behavioral expectations (`tests/AGENTS.md`)
 - `docs/` — MkDocs user-facing documentation (no child AGENTS.md yet)
 - `.config/mise/` — mise task/tooling definitions (no child AGENTS.md yet)
-- `skills/clean-sort/` — bundled agent skill (`SKILL.md` + references; no child AGENTS.md yet)
+- `skills/pyreorder/` — bundled agent skill (`SKILL.md` + references; no child AGENTS.md yet)
 
 ## .agents/ files — demand-loaded, not always injected
 
@@ -110,7 +110,7 @@ When the user requests a durable behavior change, record it here or in the relev
 | Tool/Skill/MCP | When                        | Purpose                                                                                 |
 | -------------- | --------------------------- | --------------------------------------------------------------------------------------- |
 | `bd` / beads   | Issue tracking              | Task lifecycle, dependencies, session persistence (see `.agents/skills/beads/SKILL.md`) |
-| `csort`        | Reorganizing Python modules | CLI/API entry point for sorting; always run on modified files                           |
+| `preorder`        | Reorganizing Python modules | CLI/API entry point for sorting; always run on modified files                           |
 | `mise` / `uv`  | Task running, env, build    | `mise run`, `uv run pytest`, `uv build`                                                 |
 | `codegraph`    | Navigating code             | Symbol search, call graphs, dependency maps                                             |
 | `grepai`       | Finding code                | Semantic search by meaning, not text                                                    |
@@ -120,7 +120,7 @@ When the user requests a durable behavior change, record it here or in the relev
 
 _Always-injected_ — keep minimal. Everything else goes to `.agents/` files.
 
-1. **csort idempotency** — Run `csort`/`clean-sort` on every modified Python file before committing; the codebase must stay idempotent (re-running changes nothing).
+1. **preorder idempotency** — Run `preorder`/`pyreorder` on every modified Python file before committing; the codebase must stay idempotent (re-running changes nothing).
 2. **Scope is module reorganization** — Focus on grouping imports/globals/constants/classes/methods. Do not add ruff, isort, or other external
    sorting-tool integration. The project's own `undersort.py` (`MethodSorter`) is allowed and is not external.
 3. **Task tracking with beads** — Use `bd` for ALL task tracking. Never use markdown TODO lists or ad-hoc TodoWrite lists for project work.

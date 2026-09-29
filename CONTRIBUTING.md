@@ -6,8 +6,8 @@ Contributions are welcome! Here's how you can help.
 
 ```bash
 # Clone the repository
-git clone https://github.com/Jan Reimes/clean-sort.git
-cd clean-sort
+git clone https://github.com/Jan Reimes/pyreorder.git
+cd pyreorder
 
 # Install dependencies
 uv sync --dev

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from clean_sort import Config, sort_source, would_change
+from pyreorder import Config, sort_source, would_change
 
 
 def sort(src: str, **kwargs) -> str:
@@ -117,7 +117,7 @@ def test_would_change_with_transforms() -> None:
 
 
 def test_transforms_respect_file_disable() -> None:
-    src = "# csort: off\ndef f():\n    import json\n    return 1\n"
+    src = "# preorder: off\ndef f():\n    import json\n    return 1\n"
     assert sort_source(src, Config(hoist_inline_imports=True)) == src
 
 

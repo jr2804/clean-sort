@@ -1,5 +1,5 @@
 [project]
-name = "clean-sort"
+name = "pyreorder"
 dynamic = ["version"]
 description = "AST-based Python module reorganizer"
 readme = "README.md"
@@ -41,11 +41,10 @@ dev = [
 ]
 
 [project.scripts]
-csort = "clean_sort.cli.app:main"
-clean-sort = "clean_sort.cli.app:main"
+preorder = "pyreorder.cli.app:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/clean_sort"]
+packages = ["src/pyreorder"]
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning"]
@@ -64,7 +63,7 @@ pythonpath = ["src", "tests"]
 addopts = "-v --tb=short"
 
 [tool.pytest-cov]
-addopts = "--cov=clean_sort --cov-report=term-missing --cov-report=html --cov-report=xml"
+addopts = "--cov=pyreorder --cov-report=term-missing --cov-report=html --cov-report=xml"
 fail_under = 90
 
 [tool.codespell]
@@ -73,11 +72,11 @@ check-hidden = true
 ignore-words-list = "crate,ser,fpr,nd,fo,ba,te"
 ignore-regex = "https?://|\b[A-Z]+\b"
 
-[tool.csort]
-# clean-sort configuration. See https://codeberg.org/jr2804/clean-sort for the full schema.
-# Disabling: add a `# csort: off` comment anywhere in a file's header to skip it.
+[tool.preorder]
+# pyreorder configuration. See https://codeberg.org/jr2804/pyreorder for the full schema.
+# Disabling: add a `# preorder: off` comment anywhere in a file's header to skip it.
 
-[tool.csort.module]
+[tool.preorder.module]
 # Ordered list of section buckets. Each top-level statement is classified into one.
 # Recognized sections: imports, typing_imports, module_constants, runtime_setup, enums,
 # dataclasses, classes, functions, dunder_exports, main_block. Anything unrecognized lands in "other" (kept last).
@@ -100,20 +99,20 @@ sections = [
 #
 # WARNING: "alpha" is safe for imports/enums, but reordering interdependent
 # constants or classes can break runtime order (NameError/MRO). Only enable it
-# per-section once you have checked the result with `csort diff`.
-[tool.csort.strategy]
+# per-section once you have checked the result with `preorder diff`.
+[tool.preorder.strategy]
 enums = "alpha"
 # functions = "stepdown"   # caller before callee (top-down narrative)
 # classes = "keep"
 
-[tool.csort.class_methods]
+[tool.preorder.class_methods]
 # Reorder methods *within* each class (undersort semantics).
 enabled = true
 order = ["public", "protected", "private"]
 method_type_order = ["instance", "class", "static"]
 
-# Back-compat: csort also reads [tool.undersort] for class_methods order/method_type_order
-# when [tool.csort.class_methods] is absent.
+# Back-compat: preorder also reads [tool.undersort] for class_methods order/method_type_order
+# when [tool.preorder.class_methods] is absent.
 [tool.undersort]
 order = ["public", "protected", "private"]
 method_type_order = ["instance", "class", "static"]

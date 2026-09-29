@@ -1,11 +1,11 @@
-"""``csort`` command-line interface.
+"""``preorder`` command-line interface.
 
 Commands
 --------
 run     sort files in place (or stdin -> stdout with ``-``)
 check   exit non-zero if any file would change (for CI / pre-commit)
-diff    print unified diffs of the changes csort would make
-config  show resolved config or write a ``csort.toml`` template
+diff    print unified diffs of the changes preorder would make
+config  show resolved config or write a ``preorder.toml`` template
 """
 
 from __future__ import annotations
@@ -20,19 +20,19 @@ from typing import Annotated, cast
 
 import typer
 
-from clean_sort import VALID_STRATEGIES, Config, __version__, load_config, sort_source
-from clean_sort.cache import Cache, hash_text
-from clean_sort.config import _VALID_MTYPES, _VALID_VIS, SectionStrategy, generate_config, validate_config_keys
+from pyreorder import VALID_STRATEGIES, Config, __version__, load_config, sort_source
+from pyreorder.cache import Cache, hash_text
+from pyreorder.config import _VALID_MTYPES, _VALID_VIS, SectionStrategy, generate_config, validate_config_keys
 
-# `app`/`config_app` are runtime setup used by the decorators below; csort treats
+# `app`/`config_app` are runtime setup used by the decorators below; preorder treats
 # such unrecognised top-level statements as barriers and will not move them.
 app = typer.Typer(
-    name="csort",
+    name="preorder",
     help="AST-based structural sorter for Python source code.",
     no_args_is_help=True,
     add_completion=True,
 )
-config_app = typer.Typer(help="Manage csort configuration.", no_args_is_help=True)
+config_app = typer.Typer(help="Manage preorder configuration.", no_args_is_help=True)
 app.add_typer(config_app, name="config")
 
 _EXCLUDE_DIRS = frozenset(
@@ -55,7 +55,7 @@ _EXCLUDE_DIRS = frozenset(
 
 ConfigOpt = Annotated[
     Path | None,
-    typer.Option("--config", help="Path to csort.toml or pyproject.toml."),
+    typer.Option("--config", help="Path to preorder.toml or pyproject.toml."),
 ]
 ExcludeOpt = Annotated[
     list[str] | None,
@@ -179,7 +179,7 @@ def _main(
 
 @app.command()
 def version() -> None:
-    """Show the csort version."""
+    """Show the preorder version."""
     typer.echo(__version__)
 
 
@@ -189,7 +189,7 @@ def _parse_permutation(value: str, *, valid: frozenset[str], flag: str) -> list[
     items = [item.strip() for item in value.split(",") if item.strip()]
     if set(items) != set(valid):
         warnings.warn(
-            f"csort: {flag}={value!r} must be a permutation of {sorted(valid)}; ignoring",
+            f"preorder: {flag}={value!r} must be a permutation of {sorted(valid)}; ignoring",
             stacklevel=2,
         )
         return []
@@ -226,7 +226,7 @@ def _build_config(
         for raw in strategy_overrides.split(","):
             item = raw.strip()
             if not item or "=" not in item:
-                warnings.warn(f"csort: ignoring malformed strategy override {item!r}", stacklevel=2)
+                warnings.warn(f"preorder: ignoring malformed strategy override {item!r}", stacklevel=2)
                 continue
             name, value = item.split("=", 1)
             name, value = name.strip(), value.strip()
@@ -234,7 +234,7 @@ def _build_config(
                 cfg.strategies[name] = cast(SectionStrategy, value)
             else:
                 warnings.warn(
-                    f"csort: unknown strategy {value!r} for section {name!r}; ignoring",
+                    f"preorder: unknown strategy {value!r} for section {name!r}; ignoring",
                     stacklevel=2,
                 )
     if class_methods_order:
@@ -291,7 +291,7 @@ def _process_stdin(cfg: Config, mode: str) -> int:
     try:
         result = sort_source(source, cfg, filename="<stdin>")
     except Exception as exc:  # noqa: BLE001 - surface as CLI error
-        typer.echo(f"csort: error: {exc}", err=True)
+        typer.echo(f"preorder: error: {exc}", err=True)
         return 2
     if mode == "run":
         sys.stdout.write(result)
@@ -309,7 +309,7 @@ def _resolve_cache_dir(cfg: Config, *, use_cache: bool) -> Path | None:
     Priority:
     1. Explicitly disabled (``use_cache=False`` or ``cfg.cache_enabled=False``) → None.
     2. ``cfg.cache_dir`` if set (config or CLI override).
-    3. ``~/.cache/csort/<slug>`` where slug is derived from the config file's
+    3. ``~/.cache/preorder/<slug>`` where slug is derived from the config file's
        absolute parent directory (stable across runs, collision-resistant).
     """
     if not use_cache or not cfg.cache_enabled:
@@ -319,7 +319,7 @@ def _resolve_cache_dir(cfg: Config, *, use_cache: bool) -> Path | None:
     # Derive a stable project slug from the config's location.
     base = cfg.config_path.resolve().parent if cfg.config_path else Path.cwd()
     slug = sha256(str(base.resolve()).encode("utf-8")).hexdigest()[:12]
-    return Path.home() / ".cache" / "csort" / slug
+    return Path.home() / ".cache" / "preorder" / slug
 
 
 def _process_files(
@@ -336,7 +336,7 @@ def _process_files(
         try:
             original = file.read_text(encoding="utf-8")
         except OSError as exc:
-            typer.echo(f"csort: cannot read {file}: {exc}", err=True)
+            typer.echo(f"preorder: cannot read {file}: {exc}", err=True)
             errored = True
             continue
         # Cache lookup: skip the file if its current content matches the
@@ -349,7 +349,7 @@ def _process_files(
         try:
             result = sort_source(original, cfg, filename=str(file))
         except Exception as exc:  # noqa: BLE001
-            typer.echo(f"csort: error in {file}: {exc}", err=True)
+            typer.echo(f"preorder: error in {file}: {exc}", err=True)
             errored = True
             continue
         if cache is not None and config_sig is not None and mode in ("run", "check"):
@@ -386,15 +386,15 @@ def _sort_one(args: tuple) -> tuple:  # noqa: ANN401
     path_str, cfg_dict, mode, cache_path_str, config_sig = args
     from pathlib import Path  # noqa: PLC0415
 
-    from clean_sort import Config, sort_source  # noqa: PLC0415
-    from clean_sort.cache import Cache, hash_text  # noqa: PLC0415
+    from pyreorder import Config, sort_source  # noqa: PLC0415
+    from pyreorder.cache import Cache, hash_text  # noqa: PLC0415
 
     cfg = Config(**cfg_dict)
     path = Path(path_str)
     try:
         original = path.read_text(encoding="utf-8")
     except OSError as exc:
-        return (path_str, False, f"csort: cannot read {path}: {exc}", "", None)
+        return (path_str, False, f"preorder: cannot read {path}: {exc}", "", None)
     # Cache lookup (read-only — no save)
     cache_entries: dict[str, str] | None = None
     if cache_path_str and config_sig and mode in ("run", "check"):
@@ -406,7 +406,7 @@ def _sort_one(args: tuple) -> tuple:  # noqa: ANN401
     try:
         result = sort_source(original, cfg, filename=str(path))
     except Exception as exc:  # noqa: BLE001
-        return (path_str, False, f"csort: error in {path}: {exc}", "", None)
+        return (path_str, False, f"preorder: error in {path}: {exc}", "", None)
     # Collect cache entries (returned to main process for centralised write)
     if cache_path_str and config_sig and mode in ("run", "check"):
         source_hash = hash_text(original)
@@ -547,7 +547,7 @@ def _run(
     effective_recursive = cfg.recursive and not no_recursive
     files = _collect(paths, recursive=effective_recursive, excludes=effective_excludes)
     if not files:
-        typer.echo("csort: no Python files found")
+        typer.echo("preorder: no Python files found")
         raise typer.Exit(0)
     cache_dir = _resolve_cache_dir(cfg, use_cache=not no_cache)
     cache = Cache(cache_dir / "cache.json" if cache_dir is not None else None, ttl_days=cfg.cache_ttl_days)
@@ -684,7 +684,7 @@ def diff(
     jobs: JobsOpt = None,
     parallel_backend: ParallelBackendOpt = None,
 ) -> None:
-    """Print unified diffs of the changes csort would make."""
+    """Print unified diffs of the changes preorder would make."""
     _run(
         paths,
         "diff",
@@ -725,7 +725,7 @@ def config_generate(
     ] = None,
     force: Annotated[bool, typer.Option("--force", help="Overwrite an existing output file.")] = False,
 ) -> None:
-    """Generate a csort.toml config (default template, or merged from an existing one).
+    """Generate a preorder.toml config (default template, or merged from an existing one).
 
     Without options, prints the default template. With ``--output`` writes it to
     a file (must end in ``.toml``). With ``--with-config``, carries recognized
@@ -741,23 +741,23 @@ def config_generate(
             with with_config.open("rb") as fh:
                 data = tomllib.load(fh)
         except (OSError, tomllib.TOMLDecodeError) as exc:
-            typer.echo(f"csort: could not read {with_config}: {exc}", err=True)
+            typer.echo(f"preorder: could not read {with_config}: {exc}", err=True)
             raise typer.Exit(2) from exc
-        # If the input is a pyproject.toml, unwrap [tool.csort]
+        # If the input is a pyproject.toml, unwrap [tool.preorder]
         if with_config.name == "pyproject.toml":
-            data = data.get("tool", {}).get("csort", {}) or {}
+            data = data.get("tool", {}).get("preorder", {}) or {}
         overrides, invalid = validate_config_keys(data)
         for path in invalid:
-            typer.echo(f"csort: warning: {path} is not a recognized config option; dropping", err=True)
+            typer.echo(f"preorder: warning: {path} is not a recognized config option; dropping", err=True)
     content = generate_config(overrides=overrides, with_comments=with_comments)
     if output is None:
         typer.echo(content, nl=False)
         return
     if output.suffix != ".toml":
-        typer.echo(f"csort: --output must end in .toml (got {output.name})", err=True)
+        typer.echo(f"preorder: --output must end in .toml (got {output.name})", err=True)
         raise typer.Exit(2)
     if output.exists() and not force:
-        typer.echo(f"csort: {output} already exists (use --force to overwrite)", err=True)
+        typer.echo(f"preorder: {output} already exists (use --force to overwrite)", err=True)
         raise typer.Exit(1)
     output.write_text(content, encoding="utf-8")
     typer.echo(f"wrote {output}")
@@ -781,12 +781,12 @@ def config_show(config: ConfigOpt = None) -> None:
     typer.echo(f"discovery.exclude = {cfg.exclude}")
     typer.echo(f"discovery.recursive = {cfg.recursive}")
     typer.echo(f"cli.cache = {cfg.cache_enabled}")
-    typer.echo(f"cli.cache_dir = {cfg.cache_dir or '<default: ~/.cache/csort/<slug>>'}")
+    typer.echo(f"cli.cache_dir = {cfg.cache_dir or '<default: ~/.cache/preorder/<slug>>'}")
     typer.echo(f"cli.cache_ttl_days = {cfg.cache_ttl_days}")
     typer.echo(f"cli.jobs = {cfg.jobs}")
     typer.echo(f"cli.parallel_backend = {cfg.parallel_backend!r}")
 
 
 def main() -> None:
-    """Entry point for the ``csort`` console script."""
+    """Entry point for the ``preorder`` console script."""
     app()

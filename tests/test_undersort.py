@@ -1,4 +1,4 @@
-"""Unit tests for ``clean_sort.undersort`` (in-class method sorting).
+"""Unit tests for ``pyreorder.undersort`` (in-class method sorting).
 
 These tests pin the public contract:
 
@@ -10,7 +10,7 @@ These tests pin the public contract:
 * Custom ordering reshuffles method groups while keeping stability inside
   each group.
 * ``# nosort`` per-method marker locks a method at its original index;
-  ``# nosort`` / ``# csort: off`` on the file header disables the file.
+  ``# nosort`` / ``# preorder: off`` on the file header disables the file.
 * Non-method class-body items keep their leading/trailing position; methods
   alone are reordered.
 * Decorators accessed via dotted form (``a.classmethod``) still count.
@@ -24,8 +24,8 @@ import warnings
 import libcst as cst
 import pytest
 
-from clean_sort import Config, sort_source
-from clean_sort.undersort import (
+from pyreorder import Config, sort_source
+from pyreorder.undersort import (
     MethodSorter,
     file_disabled,
     has_disable_comment,
@@ -200,7 +200,7 @@ def test_per_method_csort_off_locks_position() -> None:
         class C:
             def pub(self):
                 pass
-            def __priv(self):  # csort: off
+            def __priv(self):  # preorder: off
                 pass
             def prot(self):
                 pass
@@ -214,7 +214,7 @@ def test_per_method_csort_off_locks_position() -> None:
 def test_class_disable_directive_trailing() -> None:
     src = textwrap.dedent(
         """\
-        class C:  # csort: off
+        class C:  # preorder: off
             def _z(self):
                 pass
             def a(self):
@@ -315,7 +315,7 @@ def test_file_disabled_helper_false_when_no_marker() -> None:
 
 
 def test_file_disabled_helper_true_for_csort_off() -> None:
-    module = cst.parse_module("# csort: off\nimport os\n")
+    module = cst.parse_module("# preorder: off\nimport os\n")
     assert file_disabled(module) is True
 
 

@@ -4,20 +4,20 @@ title: Configuration
 
 ## Configuration
 
-`csort` is configured with a small TOML schema. The same schema is read from a
-standalone `csort.toml`, a `.config/csort.toml`, or a `[tool.csort]` table in
+`preorder` is configured with a small TOML schema. The same schema is read from a
+standalone `preorder.toml`, a `.config/preorder.toml`, or a `[tool.preorder]` table in
 `pyproject.toml`. A minimal config needs no file at all — the defaults below
 already produce a canonical layout.
 
 ### Discovery order
 
-When `csort` processes a file it searches for configuration, **first match
+When `preorder` processes a file it searches for configuration, **first match
 wins**, walking up from the file's own directory:
 
 1. `--config PATH` passed on the command line (explicit path).
-2. `csort.toml` in the current / target directory.
-3. `.config/csort.toml`.
-4. `[tool.csort]` table inside `pyproject.toml`.
+2. `preorder.toml` in the current / target directory.
+3. `.config/preorder.toml`.
+4. `[tool.preorder]` table inside `pyproject.toml`.
 
 If no configuration is found, built-in defaults are used.
 
@@ -26,8 +26,8 @@ If no configuration is found, built-in defaults are used.
 > For backwards compatibility, `class_methods.order` and
 > `class_methods.method_type_order` are read from a `[tool.undersort]` table
 > (in `pyproject.toml`) or a top-level `[undersort]` table (in standalone
-> configs) when `[tool.csort.class_methods]` is absent. The `enabled` flag
-> predates the legacy schema and is csort-only. Prefer `[tool.csort]`.
+> configs) when `[tool.preorder.class_methods]` is absent. The `enabled` flag
+> predates the legacy schema and is preorder-only. Prefer `[tool.preorder]`.
 
 ### Schema
 
@@ -48,13 +48,13 @@ barrier (see [Section layout](section-layout.md)).
 
 #### Minimal: defaults only
 
-No file required. `csort` uses the canonical section order and `keep` strategy
+No file required. `preorder` uses the canonical section order and `keep` strategy
 everywhere except `enums`, which default to `alpha`.
 
 #### Recommended starting point
 
 ```toml
-[tool.csort.module]
+[tool.preorder.module]
 sections = [
     "imports",
     "typing_imports",
@@ -68,12 +68,12 @@ sections = [
     "main_block",
 ]
 
-[tool.csort.strategy]
+[tool.preorder.strategy]
 enums = "alpha"
 # functions = "stepdown"   # caller before callee (top-down narrative)
 # classes = "keep"
 
-[tool.csort.class_methods]
+[tool.preorder.class_methods]
 enabled = true
 order = ["public", "protected", "private"]
 method_type_order = ["instance", "class", "static"]
@@ -85,7 +85,7 @@ Set a strategy only for the sections you care about. Omitted sections keep
 their original order (`keep`).
 
 ```toml
-[tool.csort.strategy]
+[tool.preorder.strategy]
 enums = "alpha"
 functions = "stepdown"
 classes = "abstraction"
@@ -98,7 +98,7 @@ target matches `^[A-Z_][A-Z0-9_]*$` (e.g. `MAX_CONN`, `__version__`). Change the
 pattern to widen or narrow it:
 
 ```toml
-[tool.csort.classification]
+[tool.preorder.classification]
 constants_pattern = "^[A-Z][A-Z0-9_]*$"
 ```
 
@@ -108,7 +108,7 @@ that is placed after `functions` and before `main_block`. By default only
 `__author__`, etc. near the bottom of the module too:
 
 ```toml
-[tool.csort.classification]
+[tool.preorder.classification]
 dunder_exports_names = ["__all__", "__version__", "__author__"]
 ```
 
@@ -124,26 +124,26 @@ Five flags let you deviate from the file config without editing it:
 | `--strategy-overrides`   | Override per-section strategy, e.g. `functions=alpha`.                   |
 | `--class-methods-order`  | Override method visibility order, e.g. `private,public,protected`.       |
 | `--method-type-order`    | Override method-type order, e.g. `static,instance,class`.                |
-| `--fail` / `--no-fail`   | Control whether `csort run` exits non-zero when files change (`run` only). |
+| `--fail` / `--no-fail`   | Control whether `preorder run` exits non-zero when files change (`run` only). |
 
 The order/type flags accept a **permutation** of `public`/`protected`/`private` or
 `instance`/`class`/`static` respectively; an invalid permutation warns and
 falls back to the configured order.
 
-`--fail` / `--no-fail` (`csort run` only) controls the exit code when files
+`--fail` / `--no-fail` (`preorder run` only) controls the exit code when files
 were modified. The default is controlled by `[cli] fail_on_changed` (see
-below); `--no-fail` is useful when running `csort` from a formatter task
+below); `--no-fail` is useful when running `preorder` from a formatter task
 that always writes and should not surface as a failure.
 
 ```shell
 # Only reorder the functions section, using step-down ordering:
-csort run src/ --section-only functions --strategy-overrides functions=stepdown
+preorder run src/ --section-only functions --strategy-overrides functions=stepdown
 
 # Restrict to several sections; each reorders independently:
-csort run src/ --section-only functions,classes --strategy-overrides functions=stepdown,classes=keep
+preorder run src/ --section-only functions,classes --strategy-overrides functions=stepdown,classes=keep
 
 # Reorder methods so private comes first, regardless of the file config:
-csort run src/ --class-methods-order private,protected,public
+preorder run src/ --class-methods-order private,protected,public
 ```
 
 These map onto the corresponding `Config` fields and are resolved on top of
@@ -153,15 +153,15 @@ the discovered file config.
 
 ```toml
 [cli]
-# Exit non-zero when `csort run` modifies files (default: true).
+# Exit non-zero when `preorder run` modifies files (default: true).
 # Pre-commit hooks and CI rely on this to detect drift. Override per-invocation
 # with `--no-fail` (useful from formatter tasks that always write).
 fail_on_changed = true
 
 # Content-hash skip cache: avoids re-parsing already-sorted files.
-# Default: on, stored in ~/.cache/csort/<project-slug>/cache.json
+# Default: on, stored in ~/.cache/preorder/<project-slug>/cache.json
 # cache = true
-# cache_dir = ".csort-cache"  # override location (relative to cwd or absolute)
+# cache_dir = ".preorder-cache"  # override location (relative to cwd or absolute)
 
 # Parallel file processing: 0 = serial, negative = auto (int(0.75*cpu_count())).
 # Default: 0 (serial). Use --jobs/-j to override per-invocation.
@@ -186,7 +186,7 @@ serially regardless of the ``jobs`` setting.
 
 ### `[discovery]` table
 
-Controls which files `csort` scans when given a directory.
+Controls which files `preorder` scans when given a directory.
 
 ```toml
 [discovery]
@@ -203,40 +203,40 @@ flags (CLI patterns append, they do not replace).
 
 ### Opt-out directives
 
-- **Whole file:** a `# csort: off` (or `# nosort`) comment anywhere in the
+- **Whole file:** a `# preorder: off` (or `# nosort`) comment anywhere in the
   module header skips the file entirely.
-- **Single class:** `class C:  # csort: off` leaves that class's methods
+- **Single class:** `class C:  # preorder: off` leaves that class's methods
   untouched.
 
 ### Generating a config template
 
-`csort config generate` produces a csort.toml template from the current
+`preorder config generate` produces a preorder.toml template from the current
 config schema. Without options it prints the default template to stdout.
 
 ```shell
 # Print the default template
-csort config generate
+preorder config generate
 
 # Write it to a file (must end in .toml)
-csort config generate --output csort.toml
+preorder config generate --output preorder.toml
 
 # Add explanatory comments for each setting
-csort config generate --with-comments --output csort.toml
+preorder config generate --with-comments --output preorder.toml
 
 # Merge values from an existing config (upgrade path for new versions):
 # recognized keys are carried forward; unknown/deprecated keys are dropped
 # with a warning on stderr.
-csort config generate --with-config old-csort.toml --output csort.toml
+preorder config generate --with-config old-preorder.toml --output preorder.toml
 ```
 
 The schema is the single source of truth: `generate` only emits keys that the
-currently-installed csort recognizes. This makes it the right tool for upgrading
+currently-installed preorder recognizes. This makes it the right tool for upgrading
 an old config when new options appear or old ones are removed.
 
 ### Programmatic configuration
 
 ```python
-from clean_sort import Config, sort_source
+from pyreorder import Config, sort_source
 
 cfg = Config(
     strategies={"functions": "stepdown", "enums": "alpha"},

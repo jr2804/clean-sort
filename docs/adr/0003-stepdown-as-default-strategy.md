@@ -11,7 +11,7 @@ title: "ADR 0003: stepdown as the default strategy"
 ## Context and problem statement
 
 Within a configured section, statements have to be put in *some* order.
-`csort` offers four strategies:
+`preorder` offers four strategies:
 
 - **`keep`** — preserve the original order.
 - **`alpha`** — alphabetise by statement name.
@@ -94,9 +94,9 @@ Neutral:
 
 ## References
 
-- `src/clean_sort/sorters.py::dependency` — the topological sort
+- `src/pyreorder/sorters.py::dependency` — the topological sort
   implementation.
-- `src/clean_sort/config.py::Config.strategies` — per-section strategy
+- `src/pyreorder/config.py::Config.strategies` — per-section strategy
   configuration.
 - [Sorting modes](../sorting-modes.md) — user-facing documentation of
   the four strategies.

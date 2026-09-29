@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Example: sort Python source programmatically with clean_sort.
+"""Example: sort Python source programmatically with pyreorder.
 
-Run:  uvx clean-sort --version   # ensure installed
+Run:  uvx pyreorder --version   # ensure installed
       python sort_programmatically.py
 """
 
 from __future__ import annotations
 
-from clean_sort import Config, sort_source
+from pyreorder import Config, sort_source
 
 UNSORTED = '''\
 import sys

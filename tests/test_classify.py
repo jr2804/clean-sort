@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import libcst as cst
 
-from clean_sort import Config
-from clean_sort.classify import (
+from pyreorder import Config
+from pyreorder.classify import (
     classify,
     is_module_docstring,
     primary_name,

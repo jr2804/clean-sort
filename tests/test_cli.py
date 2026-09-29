@@ -1,4 +1,4 @@
-"""Tests for the csort CLI."""
+"""Tests for the preorder CLI."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from clean_sort import Config
-from clean_sort.cli.app import _process_files_parallel, app
+from pyreorder import Config
+from pyreorder.cli.app import _process_files_parallel, app
 
 # ----------------------------------------------------------- --fail/--no-fail
 _UNSORTED = "ZEBRA = 1\nAPPLE = 2\n"
@@ -29,7 +29,7 @@ def test_version_command() -> None:
 def test_run_stdin_sorts(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     # Run from a clean cwd so no project config leaks in.
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text('[strategy]\nfunctions = "alpha"\n', encoding="utf-8")
+    (tmp_path / "preorder.toml").write_text('[strategy]\nfunctions = "alpha"\n', encoding="utf-8")
     src = "def b():\n    pass\ndef a():\n    pass\n"
     res = runner.invoke(app, ["run", "-"], input=src)
     assert res.exit_code == 0
@@ -38,7 +38,7 @@ def test_run_stdin_sorts(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
 
 def test_check_detects_unsorted(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    cfg_file = tmp_path / "csort.toml"
+    cfg_file = tmp_path / "preorder.toml"
     cfg_file.write_text('[strategy]\nfunctions = "alpha"\n', encoding="utf-8")
     target = tmp_path / "m.py"
     target.write_text("def b():\n    pass\ndef a():\n    pass\n", encoding="utf-8")
@@ -54,7 +54,7 @@ def test_check_detects_unsorted(tmp_path: Path, monkeypatch) -> None:  # noqa: A
 
 def test_diff_shows_changes(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text('[strategy]\nfunctions = "alpha"\n', encoding="utf-8")
+    (tmp_path / "preorder.toml").write_text('[strategy]\nfunctions = "alpha"\n', encoding="utf-8")
     target = tmp_path / "m.py"
     target.write_text("def b():\n    pass\ndef a():\n    pass\n", encoding="utf-8")
 
@@ -75,7 +75,7 @@ def test_config_generate_default(tmp_path: Path, monkeypatch) -> None:  # noqa: 
 
 def test_config_generate_output(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    out_file = tmp_path / "csort.toml"
+    out_file = tmp_path / "preorder.toml"
     res = runner.invoke(app, ["config", "generate", "--output", str(out_file)])
     assert res.exit_code == 0
     assert out_file.exists()
@@ -84,7 +84,7 @@ def test_config_generate_output(tmp_path: Path, monkeypatch) -> None:  # noqa: A
 
 def test_config_generate_output_enforces_toml(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    out_file = tmp_path / "csort.txt"
+    out_file = tmp_path / "preorder.txt"
     res = runner.invoke(app, ["config", "generate", "--output", str(out_file)])
     assert res.exit_code == 2  # bad extension
     assert not out_file.exists()
@@ -92,7 +92,7 @@ def test_config_generate_output_enforces_toml(tmp_path: Path, monkeypatch) -> No
 
 def test_config_generate_output_exists_no_force(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    out_file = tmp_path / "csort.toml"
+    out_file = tmp_path / "preorder.toml"
     out_file.write_text("existing", encoding="utf-8")
     res = runner.invoke(app, ["config", "generate", "--output", str(out_file)])
     assert res.exit_code == 1  # already exists
@@ -100,7 +100,7 @@ def test_config_generate_output_exists_no_force(tmp_path: Path, monkeypatch) -> 
 
 def test_config_generate_output_force(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    out_file = tmp_path / "csort.toml"
+    out_file = tmp_path / "preorder.toml"
     out_file.write_text("existing", encoding="utf-8")
     res = runner.invoke(app, ["config", "generate", "--output", str(out_file), "--force"])
     assert res.exit_code == 0
@@ -157,8 +157,8 @@ def test_config_show(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
 def test_section_only_restricts_reordering(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     # Clean cwd; functions use alpha so the restricted section still reorders.
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text('[strategy]\nfunctions = "alpha"\n', encoding="utf-8")
-    # imports sit after the functions; without --section-only csort hoists them
+    (tmp_path / "preorder.toml").write_text('[strategy]\nfunctions = "alpha"\n', encoding="utf-8")
+    # imports sit after the functions; without --section-only preorder hoists them
     # to the top. With --section-only functions, imports become a barrier and stay.
     src = "def b():\n    pass\ndef a():\n    pass\nimport os\n"
     res = runner.invoke(app, ["run", "-", "--section-only", "functions"], input=src)
@@ -170,7 +170,7 @@ def test_section_only_restricts_reordering(tmp_path: Path, monkeypatch) -> None:
 def test_strategy_overrides_changes_strategy(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
     # base config keeps function order; the override flips functions to alpha.
-    (tmp_path / "csort.toml").write_text('[strategy]\nfunctions = "keep"\n', encoding="utf-8")
+    (tmp_path / "preorder.toml").write_text('[strategy]\nfunctions = "keep"\n', encoding="utf-8")
     src = "def b():\n    pass\ndef a():\n    pass\n"
     res = runner.invoke(app, ["run", "-", "--strategy-overrides", "functions=alpha"], input=src)
     assert res.exit_code == 0
@@ -179,7 +179,7 @@ def test_strategy_overrides_changes_strategy(tmp_path: Path, monkeypatch) -> Non
 
 def test_strategy_overrides_invalid_is_ignored(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text('[strategy]\nfunctions = "keep"\n', encoding="utf-8")
+    (tmp_path / "preorder.toml").write_text('[strategy]\nfunctions = "keep"\n', encoding="utf-8")
     src = "def b():\n    pass\ndef a():\n    pass\n"
     # unknown strategy value is warned and ignored, so the base "keep" wins.
     res = runner.invoke(app, ["run", "-", "--strategy-overrides", "functions=bogus"], input=src)
@@ -189,7 +189,7 @@ def test_strategy_overrides_invalid_is_ignored(tmp_path: Path, monkeypatch) -> N
 
 def test_section_only_multiple_sections(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text('[strategy]\nfunctions = "alpha"\nimports = "alpha"\n', encoding="utf-8")
+    (tmp_path / "preorder.toml").write_text('[strategy]\nfunctions = "alpha"\nimports = "alpha"\n', encoding="utf-8")
     src = "def b():\n    pass\ndef a():\n    pass\nimport zeta\nimport alpha\n"
     res = runner.invoke(app, ["run", "-", "--section-only", "imports,functions"], input=src)
     assert res.exit_code == 0
@@ -199,7 +199,7 @@ def test_section_only_multiple_sections(tmp_path: Path, monkeypatch) -> None:  #
 
 def test_strategy_overrides_multiple_sections(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text('[strategy]\nfunctions = "keep"\n', encoding="utf-8")
+    (tmp_path / "preorder.toml").write_text('[strategy]\nfunctions = "keep"\n', encoding="utf-8")
     src = "def b():\n    pass\ndef a():\n    pass\nimport zeta\nimport alpha\n"
     res = runner.invoke(
         app,
@@ -230,9 +230,9 @@ def test_remove_type_checking_flag(tmp_path: Path, monkeypatch) -> None:  # noqa
 
 def test_class_methods_order_override(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    # base csort config keeps the default ordering (public first); the CLI
+    # base preorder config keeps the default ordering (public first); the CLI
     # override flips visibility so private comes first.
-    (tmp_path / "csort.toml").write_text("[class_methods]\nenabled = true\n", encoding="utf-8")
+    (tmp_path / "preorder.toml").write_text("[class_methods]\nenabled = true\n", encoding="utf-8")
     src = "class C:\n    def pub(self):\n        pass\n    def __priv(self):\n        pass\n"
     res = runner.invoke(
         app,
@@ -245,7 +245,7 @@ def test_class_methods_order_override(tmp_path: Path, monkeypatch) -> None:  # n
 
 def test_method_type_order_override(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text("[class_methods]\nenabled = true\n", encoding="utf-8")
+    (tmp_path / "preorder.toml").write_text("[class_methods]\nenabled = true\n", encoding="utf-8")
     src = "class C:\n    def i(self):\n        pass\n    @staticmethod\n    def s():\n        pass\n"
     res = runner.invoke(
         app,
@@ -258,7 +258,7 @@ def test_method_type_order_override(tmp_path: Path, monkeypatch) -> None:  # noq
 
 def test_class_methods_order_invalid_is_ignored(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text("[class_methods]\nenabled = true\n", encoding="utf-8")
+    (tmp_path / "preorder.toml").write_text("[class_methods]\nenabled = true\n", encoding="utf-8")
     src = "class C:\n    def _prot(self):\n        pass\n    def pub(self):\n        pass\n"
     # bogus value warns and falls back to the configured order
     # (public before protected by default).
@@ -273,7 +273,7 @@ def test_class_methods_order_invalid_is_ignored(tmp_path: Path, monkeypatch) -> 
 
 def test_run_exits_1_by_default_when_changed(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text('[strategy]\nmodule_constants = "alpha"\n', encoding="utf-8")
+    (tmp_path / "preorder.toml").write_text('[strategy]\nmodule_constants = "alpha"\n', encoding="utf-8")
     target = tmp_path / "m.py"
     target.write_text(_UNSORTED, encoding="utf-8")
 
@@ -283,7 +283,7 @@ def test_run_exits_1_by_default_when_changed(tmp_path: Path, monkeypatch) -> Non
 
 def test_run_no_fail_exits_0_when_changed(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text('[strategy]\nmodule_constants = "alpha"\n', encoding="utf-8")
+    (tmp_path / "preorder.toml").write_text('[strategy]\nmodule_constants = "alpha"\n', encoding="utf-8")
     target = tmp_path / "m.py"
     target.write_text(_UNSORTED, encoding="utf-8")
 
@@ -293,7 +293,7 @@ def test_run_no_fail_exits_0_when_changed(tmp_path: Path, monkeypatch) -> None: 
 
 def test_run_config_fail_on_changed_false(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text(
+    (tmp_path / "preorder.toml").write_text(
         '[cli]\nfail_on_changed = false\n[strategy]\nmodule_constants = "alpha"\n',
         encoding="utf-8",
     )
@@ -306,7 +306,7 @@ def test_run_config_fail_on_changed_false(tmp_path: Path, monkeypatch) -> None: 
 
 def test_run_cli_fail_overrides_config_false(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text(
+    (tmp_path / "preorder.toml").write_text(
         '[cli]\nfail_on_changed = false\n[strategy]\nmodule_constants = "alpha"\n',
         encoding="utf-8",
     )
@@ -322,7 +322,7 @@ def test_run_cli_fail_overrides_config_false(tmp_path: Path, monkeypatch) -> Non
 
 def test_run_config_exclude_applies(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text(
+    (tmp_path / "preorder.toml").write_text(
         '[discovery]\nexclude = ["skip.py"]\n[strategy]\nmodule_constants = "alpha"\n',
         encoding="utf-8",
     )
@@ -339,7 +339,7 @@ def test_run_config_exclude_applies(tmp_path: Path, monkeypatch) -> None:  # noq
 
 def test_run_cli_exclude_merges_with_config(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text(
+    (tmp_path / "preorder.toml").write_text(
         '[discovery]\nexclude = ["skip.py"]\n[strategy]\nmodule_constants = "alpha"\n',
         encoding="utf-8",
     )
@@ -358,7 +358,7 @@ def test_run_cli_exclude_merges_with_config(tmp_path: Path, monkeypatch) -> None
 
 def test_run_config_recursive_false(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text(
+    (tmp_path / "preorder.toml").write_text(
         '[discovery]\nrecursive = false\n[strategy]\nmodule_constants = "alpha"\n',
         encoding="utf-8",
     )
@@ -377,7 +377,7 @@ def test_run_config_recursive_false(tmp_path: Path, monkeypatch) -> None:  # noq
 
 def test_run_no_recursive_overrides_config_true(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text(
+    (tmp_path / "preorder.toml").write_text(
         '[discovery]\nrecursive = true\n[strategy]\nmodule_constants = "alpha"\n',
         encoding="utf-8",
     )
@@ -399,7 +399,7 @@ def test_run_no_recursive_overrides_config_true(tmp_path: Path, monkeypatch) -> 
 
 def test_no_cache_flag_disables_cache(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text(
+    (tmp_path / "preorder.toml").write_text(
         '[strategy]\nmodule_constants = "alpha"\n',
         encoding="utf-8",
     )
@@ -415,7 +415,7 @@ def test_no_cache_flag_disables_cache(tmp_path: Path, monkeypatch) -> None:  # n
 
 def test_cache_config_disabled(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text(
+    (tmp_path / "preorder.toml").write_text(
         '[cli]\ncache = false\n[strategy]\nmodule_constants = "alpha"\n',
         encoding="utf-8",
     )
@@ -434,7 +434,7 @@ def test_cache_config_disabled(tmp_path: Path, monkeypatch) -> None:  # noqa: AN
 
 def test_parallel_jobs_flag(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text(
+    (tmp_path / "preorder.toml").write_text(
         '[strategy]\nmodule_constants = "alpha"\n',
         encoding="utf-8",
     )
@@ -448,7 +448,7 @@ def test_parallel_jobs_flag(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN00
 
 def test_parallel_serial_when_jobs_zero(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text(
+    (tmp_path / "preorder.toml").write_text(
         '[strategy]\nmodule_constants = "alpha"\n',
         encoding="utf-8",
     )
@@ -461,7 +461,7 @@ def test_parallel_serial_when_jobs_zero(tmp_path: Path, monkeypatch) -> None:  #
 
 def test_parallel_backend_thread(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text(
+    (tmp_path / "preorder.toml").write_text(
         '[strategy]\nmodule_constants = "alpha"\n',
         encoding="utf-8",
     )
@@ -474,7 +474,7 @@ def test_parallel_backend_thread(tmp_path: Path, monkeypatch) -> None:  # noqa: 
 
 def test_parallel_config_jobs(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "csort.toml").write_text(
+    (tmp_path / "preorder.toml").write_text(
         '[cli]\njobs = 0\n[strategy]\nmodule_constants = "alpha"\n',
         encoding="utf-8",
     )

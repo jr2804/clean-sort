@@ -5,7 +5,7 @@ title: Sorting modes
 ## Sorting modes
 
 Each section is ordered by a _strategy_. Set it per section under
-`[tool.csort.strategy]`, or override on the fly with
+`[tool.preorder.strategy]`, or override on the fly with
 `--strategy-overrides`. Four strategies exist:
 
 | Value         | Meaning                                          | Applies to                |
@@ -21,7 +21,7 @@ order.
 
 ### `keep`
 
-The default. Statements stay exactly where you wrote them; `csort` only moves
+The default. Statements stay exactly where you wrote them; `preorder` only moves
 them between sections, never reorders within one.
 
 ### `alpha`
@@ -51,10 +51,10 @@ def zebra():
 >
 > `alpha` is safe for `imports` and `enums`, but reordering interdependent
 > `module_constants` or `classes` (inheritance, forward references) can raise
-> `NameError` / `MRO` errors at runtime. Always preview with `csort diff`
+> `NameError` / `MRO` errors at runtime. Always preview with `preorder diff`
 > before committing an `alpha` reordering of constants or classes.
 >
-> **Note:** csort now automatically prevents the most common `NameError` case:
+> **Note:** preorder now automatically prevents the most common `NameError` case:
 > a module-level assignment (constant or ``runtime_setup``) whose RHS
 > references a name defined in a later section (e.g. ``_DEFAULT_COLOR =
 > Color.RED`` where ``Color`` is an enum) is treated as a barrier — it stays
@@ -120,7 +120,7 @@ def main():          # orchestrator last
 
 ### In-class method ordering (undersort)
 
-Independent of the section strategy, `csort` reorders methods _within_ each
+Independent of the section strategy, `preorder` reorders methods _within_ each
 class using undersort semantics — grouped by visibility then method type,
 stable within each group:
 
@@ -150,33 +150,33 @@ class Service:
         ...
 ```
 
-Configure the grouping under `[tool.csort.class_methods]`, or disable it with
-`enabled = false`. A `class C:  # csort: off` trailing comment opts a single
-class out; `# nosort` works the same. Per-method `# nosort` (or `# csort: off`)
+Configure the grouping under `[tool.preorder.class_methods]`, or disable it with
+`enabled = false`. A `class C:  # preorder: off` trailing comment opts a single
+class out; `# nosort` works the same. Per-method `# nosort` (or `# preorder: off`)
 locks that single method at its original index even when the class is reordered.
 
 For one-off invocations, pass the overrides on the command line:
 
 ```shell
-csort run src/ --class-methods-order private,protected,public
-csort run src/ --method-type-order static,instance,class
+preorder run src/ --class-methods-order private,protected,public
+preorder run src/ --method-type-order static,instance,class
 ```
 
 These resolve on top of the discovered file config and apply to every command
 (`run`, `check`, `diff`). The legacy `[tool.undersort]` (or top-level
 `[undersort]` in standalone configs) is still read for `order` and
-`method_type_order` when `[tool.csort.class_methods]` is absent.
+`method_type_order` when `[tool.preorder.class_methods]` is absent.
 
 ### Trying it out safely
 
-Always preview changes before writing them. `csort diff` shows a unified diff
-without touching the file, and `csort check` (exit-code based) is ideal for CI
+Always preview changes before writing them. `preorder diff` shows a unified diff
+without touching the file, and `preorder check` (exit-code based) is ideal for CI
 or pre-commit hooks:
 
 ```shell
-csort diff src/                            # preview every change
-csort run src/ --strategy-overrides functions=stepdown
-csort check src/                           # exit 1 if anything would change
+preorder diff src/                            # preview every change
+preorder run src/ --strategy-overrides functions=stepdown
+preorder check src/                           # exit 1 if anything would change
 ```
 
 ### Realistic examples
@@ -197,6 +197,6 @@ toy snippets. Each has an `*_unsorted.py` input and its committed
 Try them:
 
 ```shell
-csort diff tests/data/plugin_registry_unsorted.py
-csort run tests/data/inventory_models_unsorted.py --strategy-overrides enums=alpha,functions=alpha
+preorder diff tests/data/plugin_registry_unsorted.py
+preorder run tests/data/inventory_models_unsorted.py --strategy-overrides enums=alpha,functions=alpha
 ```
