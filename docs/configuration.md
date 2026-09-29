@@ -5,7 +5,7 @@ title: Configuration
 ## Configuration
 
 `preorder` is configured with a small TOML schema. The same schema is read from a
-standalone `preorder.toml`, a `.config/preorder.toml`, or a `[tool.preorder]` table in
+standalone `pyreorder.toml`, a `.config/pyreorder.toml`, or a `[tool.preorder]` table in
 `pyproject.toml`. A minimal config needs no file at all — the defaults below
 already produce a canonical layout.
 
@@ -15,8 +15,8 @@ When `preorder` processes a file it searches for configuration, **first match
 wins**, walking up from the file's own directory:
 
 1. `--config PATH` passed on the command line (explicit path).
-2. `preorder.toml` in the current / target directory.
-3. `.config/preorder.toml`.
+2. `pyreorder.toml` in the current / target directory.
+3. `.config/pyreorder.toml`.
 4. `[tool.preorder]` table inside `pyproject.toml`.
 
 If no configuration is found, built-in defaults are used.
@@ -159,9 +159,9 @@ the discovered file config.
 fail_on_changed = true
 
 # Content-hash skip cache: avoids re-parsing already-sorted files.
-# Default: on, stored in ~/.cache/preorder/<project-slug>/cache.json
+# Default: on, stored in ~/.cache/pyreorder/<project-slug>/cache.json
 # cache = true
-# cache_dir = ".preorder-cache"  # override location (relative to cwd or absolute)
+# cache_dir = ".pyreorder-cache"  # override location (relative to cwd or absolute)
 
 # Parallel file processing: 0 = serial, negative = auto (int(0.75*cpu_count())).
 # Default: 0 (serial). Use --jobs/-j to override per-invocation.
@@ -210,7 +210,7 @@ flags (CLI patterns append, they do not replace).
 
 ### Generating a config template
 
-`preorder config generate` produces a preorder.toml template from the current
+`preorder config generate` produces a pyreorder.toml template from the current
 config schema. Without options it prints the default template to stdout.
 
 ```shell
@@ -218,15 +218,15 @@ config schema. Without options it prints the default template to stdout.
 preorder config generate
 
 # Write it to a file (must end in .toml)
-preorder config generate --output preorder.toml
+preorder config generate --output pyreorder.toml
 
 # Add explanatory comments for each setting
-preorder config generate --with-comments --output preorder.toml
+preorder config generate --with-comments --output pyreorder.toml
 
 # Merge values from an existing config (upgrade path for new versions):
 # recognized keys are carried forward; unknown/deprecated keys are dropped
 # with a warning on stderr.
-preorder config generate --with-config old-preorder.toml --output preorder.toml
+preorder config generate --with-config old-pyreorder.toml --output pyreorder.toml
 ```
 
 The schema is the single source of truth: `generate` only emits keys that the

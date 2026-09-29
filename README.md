@@ -29,7 +29,7 @@ preorder --version
 preorder run src/                 # sort files in place
 preorder check src/               # exit 1 if anything would change (CI / pre-commit)
 preorder diff src/                # preview changes
-preorder config generate          # write/print a preorder.toml template (--with-comments, --with-config)
+preorder config generate          # write/print a pyreorder.toml template (--with-comments, --with-config)
 ```
 
 ### Before → after
@@ -82,7 +82,7 @@ if __name__ == "__main__":
 ## Configuration
 
 Discovered from (first wins, walking up from the target file): `--config`,
-`preorder.toml`, `.config/preorder.toml`, `[tool.preorder]` in `pyproject.toml`.
+`pyreorder.toml`, `.config/pyreorder.toml`, `[tool.preorder]` in `pyproject.toml`.
 
 ```toml
 [tool.preorder.module]

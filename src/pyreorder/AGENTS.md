@@ -51,7 +51,7 @@ Core library code. Config and the Typer CLI also live here (`config.py`, `cli/ap
   `--no-recursive` overrides `recursive=true` per-invocation.
 - **Content-hash skip cache**: preorder caches the hash of sorted output keyed by ``(config_signature, source_hash)``.
   On repeat runs, files whose content hash matches the cached sorted hash are skipped entirely (no parse,
-  no sort). Default location: ``~/.cache/preorder/<project-slug>/cache.json``. Configurable via
+  no sort). Default location: ``~/.cache/pyreorder/<project-slug>/cache.json``. Configurable via
   ``[cli] cache_dir``; disabled via ``[cli] cache = false`` or ``--no-cache``. The cache is safe by
   construction: it only skips files that are already in their sorted state.
 - **Parallel file processing**: preorder can sort files in parallel using a process pool

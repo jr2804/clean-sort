@@ -3,9 +3,16 @@
 Config is read from (first match wins, walking up from the target file):
 
 * ``--config PATH`` (explicit)
-* ``preorder.toml`` in the current or any parent directory
-* ``.config/preorder.toml`` in the current or any parent directory
+* ``pyreorder.toml`` in the current or any parent directory
+* ``.config/pyreorder.toml`` in the current or any parent directory
 * ``[tool.preorder]`` in ``pyproject.toml``
+
+.. note::
+
+    On first invocation, legacy config file names (``csort.toml``,
+    ``preorder.toml``, etc.) are auto-migrated to the current scheme via
+    :func:`pyreorder.migrate.migrate_if_needed`. See that module for the
+    exact rename table and the sentinel-based idempotency mechanism.
 
 """
 
@@ -41,7 +48,7 @@ VALID_STRATEGIES: frozenset[str] = frozenset({"keep", "alpha", "stepdown", "abst
 _VALID_VIS = frozenset({"public", "protected", "private"})
 _VALID_MTYPES = frozenset({"instance", "class", "static"})
 
-CSORT_FILES: tuple[str, ...] = ("preorder.toml", ".config/preorder.toml")
+PYREORDER_FILES: tuple[str, ...] = ("pyreorder.toml", ".config/pyreorder.toml")
 
 
 SectionStrategy = Literal["keep", "alpha", "stepdown", "abstraction"]
@@ -82,7 +89,7 @@ class Config:
             whose content hash matches a cached sorted-output hash. Disable
             via ``[cli] cache = false`` or ``--no-cache``.
         cache_dir: Directory storing the content-hash cache. Defaults to
-            ``~/.cache/preorder/<project-slug>`` (or ``./.preorder-cache/`` when
+            ``~/.cache/pyreorder/<project-slug>`` (or ``./.pyreorder-cache/`` when
             configured). Overrides via ``[cli] cache_dir``.
         jobs: Number of parallel workers (0 = serial, negative = auto-detect
             ``int(0.75 * cpu_count())``). Configurable via ``[cli] jobs`` or
@@ -334,11 +341,11 @@ def _read_toml(path: Path) -> dict[str, Any]:
         return tomllib.load(fh)
 
 
-def _csort_table_from_data(data: dict[str, Any], *, is_pyproject: bool) -> dict[str, Any]:
+def _preorder_table_from_data(data: dict[str, Any], *, is_pyproject: bool) -> dict[str, Any]:
     """Extract the preorder config table from parsed TOML data."""
     if is_pyproject:
         return data.get("tool", {}).get("preorder", {}) or {}
-    # standalone preorder.toml: top-level is the preorder config, but tolerate a
+    # standalone pyreorder.toml: top-level is the preorder config, but tolerate a
     # [tool.preorder] table too.
     if "preorder" in data.get("tool", {}):
         return data["tool"]["preorder"] or {}
@@ -349,7 +356,7 @@ def discover(start: Path | None = None) -> Path | None:
     """Walk up from ``start`` (cwd by default) to find a pyreorder config file."""
     base = (start or Path.cwd()).resolve()
     for directory in [base, *base.parents]:
-        for rel in CSORT_FILES:
+        for rel in PYREORDER_FILES:
             candidate = directory / rel
             if candidate.is_file():
                 return candidate
@@ -374,7 +381,16 @@ def load(
 
     ``explicit`` overrides discovery. ``start`` is the directory to search from
     (defaults to cwd) and is ignored when ``explicit`` is given.
+
+    Before discovery, :func:`pyreorder.migrate.migrate_if_needed` is called to
+    rename any legacy config / cache paths (e.g. ``csort.toml`` ->
+    ``pyreorder.toml``). On a steady-state install with no legacy paths, the
+    only cost is one ``stat()`` call on the migration sentinel.
     """
+    # Auto-migrate legacy config file / cache paths before discovery.
+    from pyreorder.migrate import migrate_if_needed
+
+    migrate_if_needed()
     path = explicit or discover(start)
     if path is None:
         return Config()
@@ -385,7 +401,7 @@ def load(
         return Config(config_path=path)
 
     is_pyproject = path.name == "pyproject.toml"
-    table = _csort_table_from_data(data, is_pyproject=is_pyproject)
+    table = _preorder_table_from_data(data, is_pyproject=is_pyproject)
     cfg = Config.from_table(table, path=path, raw=data, is_pyproject=is_pyproject)
 
     return cfg
@@ -496,8 +512,8 @@ CONFIG_SCHEMA: list[ConfigKey] = [
     ConfigKey(
         "cli",
         "cache_dir",
-        ".preorder-cache",
-        "Cache directory (default: ~/.cache/preorder/<project-slug>/cache.json).",
+        ".pyreorder-cache",
+        "Cache directory (default: ~/.cache/pyreorder/<project-slug>/cache.json).",
         commented_out=True,
     ),
     ConfigKey(

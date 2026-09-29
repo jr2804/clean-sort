@@ -5,7 +5,7 @@ Commands
 run     sort files in place (or stdin -> stdout with ``-``)
 check   exit non-zero if any file would change (for CI / pre-commit)
 diff    print unified diffs of the changes preorder would make
-config  show resolved config or write a ``preorder.toml`` template
+config  show resolved config or write a ``pyreorder.toml`` template
 """
 
 from __future__ import annotations
@@ -55,7 +55,7 @@ _EXCLUDE_DIRS = frozenset(
 
 ConfigOpt = Annotated[
     Path | None,
-    typer.Option("--config", help="Path to preorder.toml or pyproject.toml."),
+    typer.Option("--config", help="Path to pyreorder.toml or pyproject.toml."),
 ]
 ExcludeOpt = Annotated[
     list[str] | None,
@@ -309,7 +309,7 @@ def _resolve_cache_dir(cfg: Config, *, use_cache: bool) -> Path | None:
     Priority:
     1. Explicitly disabled (``use_cache=False`` or ``cfg.cache_enabled=False``) → None.
     2. ``cfg.cache_dir`` if set (config or CLI override).
-    3. ``~/.cache/preorder/<slug>`` where slug is derived from the config file's
+    3. ``~/.cache/pyreorder/<slug>`` where slug is derived from the config file's
        absolute parent directory (stable across runs, collision-resistant).
     """
     if not use_cache or not cfg.cache_enabled:
@@ -319,7 +319,7 @@ def _resolve_cache_dir(cfg: Config, *, use_cache: bool) -> Path | None:
     # Derive a stable project slug from the config's location.
     base = cfg.config_path.resolve().parent if cfg.config_path else Path.cwd()
     slug = sha256(str(base.resolve()).encode("utf-8")).hexdigest()[:12]
-    return Path.home() / ".cache" / "preorder" / slug
+    return Path.home() / ".cache" / "pyreorder" / slug
 
 
 def _process_files(
@@ -725,7 +725,7 @@ def config_generate(
     ] = None,
     force: Annotated[bool, typer.Option("--force", help="Overwrite an existing output file.")] = False,
 ) -> None:
-    """Generate a preorder.toml config (default template, or merged from an existing one).
+    """Generate a pyreorder.toml config (default template, or merged from an existing one).
 
     Without options, prints the default template. With ``--output`` writes it to
     a file (must end in ``.toml``). With ``--with-config``, carries recognized
@@ -781,7 +781,7 @@ def config_show(config: ConfigOpt = None) -> None:
     typer.echo(f"discovery.exclude = {cfg.exclude}")
     typer.echo(f"discovery.recursive = {cfg.recursive}")
     typer.echo(f"cli.cache = {cfg.cache_enabled}")
-    typer.echo(f"cli.cache_dir = {cfg.cache_dir or '<default: ~/.cache/preorder/<slug>>'}")
+    typer.echo(f"cli.cache_dir = {cfg.cache_dir or '<default: ~/.cache/pyreorder/<slug>>'}")
     typer.echo(f"cli.cache_ttl_days = {cfg.cache_ttl_days}")
     typer.echo(f"cli.jobs = {cfg.jobs}")
     typer.echo(f"cli.parallel_backend = {cfg.parallel_backend!r}")
