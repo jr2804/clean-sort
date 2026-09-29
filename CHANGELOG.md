@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Documentation overhaul**: New `Architecture` page with two Mermaid
+  pipeline diagrams (per-stage data flow and per-file work decomposition);
+  new `Comparison with other tools` page positioning `csort` against
+  `isort`, Ruff `I001`, `undersort`, `ssort`, `sdsort`, and `ABSort`
+  (with verified references to each tool's documented behavior);
+  new `Architecture Decision Records` directory under `docs/adr/` with
+  three ADRs covering the libcst parser choice (0001), the
+  forward-reference barrier rule (0002), and the `stepdown` default
+  strategy (0003).
+
 - **`runtime_setup` section**: Module-level assignments to non-constant names
   (``logger = get_logger(__name__)``, ``app = typer.Typer()``) now group into
   a new `runtime_setup` bucket (default order: after `module_constants`)

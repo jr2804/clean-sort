@@ -14,14 +14,17 @@ nav = [
     { "License" = "license.md" },
   ] },
   { "Guide" = [
+    { "Architecture" = "architecture.md" },
     { "Configuration" = "configuration.md" },
     { "Section layout" = "section-layout.md" },
     { "Sorting modes" = "sorting-modes.md" },
+    { "Comparison" = "comparison.md" },
   ] },
   { "API reference" = "reference/api.md" },
   { "Development" = [
     { "Contributing" = "contributing.md" },
     { "Code of Conduct" = "code_of_conduct.md" },
+    { "ADRs" = "adr/index.md" },
   ] },
 ]
 
