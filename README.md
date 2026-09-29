@@ -1,6 +1,6 @@
 # pyreorder
 
-[![status: alpha](https://img.shields.io/badge/status-alpha-orange)](https://codeberg.org/jr2804/pyreorder)
+[![status: alpha](https://img.shields.io/badge/status-alpha-orange)](https://github.com/jr2804/pyreorder)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![python](https://img.shields.io/badge/python-3.11+-blue)](https://www.python.org)
 
@@ -142,7 +142,7 @@ sorted_text = sort_source(source_text, cfg)
 
 ```yaml
 repos:
-  - repo: https://codeberg.org/jr2804/pyreorder
+  - repo: https://github.com/jr2804/pyreorder
     rev: v0.1.0
     hooks:
       - id: preorder
@@ -154,7 +154,7 @@ An installable agent skill lives in [`skills/pyreorder`](skills/pyreorder).
 Install it for your AI assistant:
 
 ```shell
-bun x skills add https://codeberg.org/jr2804/pyreorder.git -s pyreorder -a universal -y
+bun x skills add https://github.com/jr2804/pyreorder.git -s pyreorder -a universal -y
 ```
 
 ## Development
@@ -173,7 +173,7 @@ The in-class method sorter is an adapted reimplementation of
 function ordering was inspired by [ssort](https://github.com/bwhmather/ssort),
 [sdsort](https://github.com/eirikurt/sdsort) and
 [ABSort](https://github.com/MapleCCC/ABSort). See
-[Credits](https://codeberg.org/jr2804/pyreorder/src/branch/main/docs/credits.md).
+[Credits](https://github.com/jr2804/pyreorder/src/branch/main/docs/credits.md).
 
 ## License
 
