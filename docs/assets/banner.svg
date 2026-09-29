@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-label="clean-sort">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e"/>
+      <stop offset="100%" stop-color="#134e4a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#7e22ce" stop-opacity="0.85"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="300" fill="url(#bg)"/>
+  <rect x="40" y="40" width="1120" height="220" rx="14" fill="url(#accent)"/>
+  <g font-family="ui-sans-serif, system-ui, sans-serif" fill="#f0fdfa">
+    <text x="80" y="135" font-size="64" font-weight="700">clean-sort</text>
+    <text x="80" y="180" font-size="22" font-weight="400" opacity="0.92">AST-based structural sorter for Python source code</text>
+    <text x="80" y="225" font-size="18" font-weight="500" opacity="0.85">preserve semantics · libcst round-trip · forward-reference barriers</text>
+  </g>
+</svg>
