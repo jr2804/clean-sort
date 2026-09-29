@@ -12,6 +12,15 @@ bun = "latest"
 "pipx:undersort" = "latest"
 "pipx:codespell" = "latest"
 
+# Codebase search trio (Jev Gate 5 — curated, conf 0.99)
+"github:yoanbernabeu/grepai"  = "latest"
+"npm:@colbymchenry/codegraph" = "latest"
+"pypi:repowise"               = "latest"
+
+# LLM-slop detectors (aligned with migration reason)
+"github:ChuprinaDaria/Vibecode-Cleaner-Fartrun" = "latest"
+"pypi:ai-slop-detector" = { version = "latest", extras = ["all"] }
+
 # CLI tools rg and tree-cli -> use `rg --files | tree-cli --fromfile` to get a nice tree view of the project files
 ripgrep = "latest"
 "github:peteretelej/tree" = { version = "latest", rename_exe = "tree-cli" }
