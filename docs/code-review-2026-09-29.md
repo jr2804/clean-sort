@@ -51,3 +51,85 @@ The results will be appended below.
   config keys; the `csort config generate` subcommand reads it.
 - `src/clean_sort/undersort.py` (`MethodSorter`) provides in-class method
   ordering; the legacy `[tool.undersort]` table is honoured as a fallback.
+
+## File inventory
+
+| Path | Lines | Notes |
+|---|---|---|
+| `src/clean_sort/pipeline.py` | 170 | |
+| `src/clean_sort/classify.py` | 322 | |
+| `src/clean_sort/sorters.py` | 103 | |
+| `src/clean_sort/config.py` | 608 | |
+| `src/clean_sort/cache.py` | 135 | |
+| `src/clean_sort/transforms.py` | 799 | |
+| `src/clean_sort/undersort.py` | 153 | |
+| `src/clean_sort/__init__.py` | 35 | |
+| `src/clean_sort/__main__.py` | 8 | |
+| `src/clean_sort/cli/app.py` | 792 | |
+
+## Test inventory
+
+| Path | Lines | Notes |
+|---|---|---|
+| `tests/test_cache.py` | 185 | |
+| `tests/test_classify.py` | 96 | |
+| `tests/test_cli.py` | 496 | |
+| `tests/test_config.py` | 257 | |
+| `tests/test_data.py` | 125 | |
+| `tests/test_pipeline.py` | 448 | |
+| `tests/test_transforms.py` | 515 | |
+| `tests/test_undersort.py` | 336 | |
+
+## Public surface per module
+
+### pipeline.py
+
+```python
+class SectionSorter(cst.CSTTransformer):
+def _strip_leading_blanks(nodes: list[cst.CSTNode]) -> tuple[cst.CSTNode, ...]:
+def sort_source(source: str, cfg: Config, *, filename: str = "<unknown>") -> str:
+def would_change(source: str, cfg: Config, *, filename: str = "<unknown>") -> bool:
+```
+
+### classify.py
+
+```python
+class ClassifyContext:
+def is_module_docstring(node: cst.CSTNode) -> bool:
+def is_future_import(node: cst.CSTNode) -> bool:
+def classify(node: cst.CSTNode, cfg, *, ctx: ClassifyContext | None = None) -> str:  # noqa: ANN001, PLR0911 - duck-typed Config
+def _is_main_guard(if_node: cst.If) -> bool:
+def _is_type_checking(if_node: cst.If) -> bool:
+def _is_enum(class_node: cst.ClassDef) -> bool:
+def _is_dataclass(class_node: cst.ClassDef) -> bool:
+def has_future_annotations(module: cst.Module) -> bool:
+def module_top_level_names(body: Sequence[cst.CSTNode]) -> dict[str, int]:
+```
+
+### sorters.py
+
+```python
+def alpha(nodes: list[cst.CSTNode]) -> list[cst.CSTNode]:
+def dependency(nodes: list[cst.CSTNode], direction: str) -> list[cst.CSTNode]:
+```
+
+## Coverage gate
+
+Configured:
+
+```toml
+    "pytest-cov>=5.0.0",
+[tool.pytest-cov]
+addopts = "--cov=clean_sort --cov-report=term-missing --cov-report=html --cov-report=xml"
+fail_under = 90
+```
+
+## What to run when mise is available
+
+```bash
+mise install
+mise run lint
+mise run test
+```
+
+Append the actual output below when those commands finish.
