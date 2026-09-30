@@ -25,7 +25,7 @@ def load_credits() -> str:
         data = tomllib.load(f)
 
     deps = data.get("dependency-groups", {}).get("dev", [])
-    lines = ["# Credits", "", "The following packages are used to generate this documentation:", ""]
+    lines = ["The following packages are used to generate this documentation:", ""]
     for dep in deps:
         if isinstance(dep, str) and not dep.startswith(("-", "#")):
             pkg_name = dep.split("[")[0].split(">=")[0].strip()
@@ -34,5 +34,8 @@ def load_credits() -> str:
     return "\n".join(lines)
 
 
-if __name__ == "__main__":
-    print(load_credits())
+# markdown-exec runs this file with ``__name__`` set to a synthetic module
+# name (never ``"__main__"``) and renders only what is printed, so the output
+# has to be produced at module level. With no print, markdown-exec renders an
+# empty block and docs/credits.md silently shows nothing.
+print(load_credits())  # noqa: T201

@@ -26,6 +26,7 @@ Mirrors `src/pyreorder/` structure with one test file per module.
 - `uv run pytest tests/test_undersort.py` — `MethodSorter` unit tests (visibility/type buckets, ordering, `nosort` / `pyreorder: off` directives, modified flag)
 - `uv run pytest tests/test_config.py` — config discovery, legacy `[tool.undersort]` fallback
 - `uv run pytest tests/test_transforms.py` — opt-in import transforms (hoist, TYPE_CHECKING removal)
+- `uv run pytest tests/test_docs_assets.py` — docs build-input guards (Mermaid fence present, credits generator prints)
 
 ## Child DOX Index
 
