@@ -33,18 +33,18 @@ Always applicable. Boundaries, priorities, verification, checklist.
 - Relevant validation ran (or gaps explicitly stated)
 - No unintended side effects introduced
 - No secrets added or exposed
-- Modified Python files are idempotent under `preorder`
+- Modified Python files are idempotent under `pyreorder`
 
 ## Content rules (keep AGENTS.md lean)
 
 - **No tree views.** Generate on demand with `rg --files | tree-cli --fromfile`.
 - **No history.** Git log has it. Only record decisions costly to rediscover (in `.agents/HISTORY.md` with commit refs).
 - **No TODO lists.** Use `bd` / beads for task tracking.
-- **preorder scope.** Module reorganization only; do not integrate ruff/isort or other external sorting tools.
+- **pyreorder scope.** Module reorganization only; do not integrate ruff/isort or other external sorting tools.
 
 ## Verification
 
-- Reorganize: `preorder check` (no diff = clean) or `uv run python -m pyreorder`
+- Reorganize: `pyreorder check` (no diff = clean) or `uv run python -m pyreorder`
 - Lint: `uv run ruff check src tests`
 - Format: `uv run ruff format src tests`
 - Typecheck: `uv run ty check src tests`

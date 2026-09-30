@@ -1,5 +1,5 @@
 # pyreorder configuration template. See references/config.md for the full schema.
-# Install into a project with: `preorder config generate --output preorder.toml`
+# Install into a project with: `pyreorder config generate --output pyreorder.toml`
 
 [module]
 sections = [

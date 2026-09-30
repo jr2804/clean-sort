@@ -4,20 +4,20 @@ title: Configuration
 
 ## Configuration
 
-`preorder` is configured with a small TOML schema. The same schema is read from a
-standalone `pyreorder.toml`, a `.config/pyreorder.toml`, or a `[tool.preorder]` table in
+`pyreorder` is configured with a small TOML schema. The same schema is read from a
+standalone `pyreorder.toml`, a `.config/pyreorder.toml`, or a `[tool.pyreorder]` table in
 `pyproject.toml`. A minimal config needs no file at all — the defaults below
 already produce a canonical layout.
 
 ### Discovery order
 
-When `preorder` processes a file it searches for configuration, **first match
+When `pyreorder` processes a file it searches for configuration, **first match
 wins**, walking up from the file's own directory:
 
 1. `--config PATH` passed on the command line (explicit path).
 2. `pyreorder.toml` in the current / target directory.
 3. `.config/pyreorder.toml`.
-4. `[tool.preorder]` table inside `pyproject.toml`.
+4. `[tool.pyreorder]` table inside `pyproject.toml`.
 
 If no configuration is found, built-in defaults are used.
 
@@ -26,8 +26,8 @@ If no configuration is found, built-in defaults are used.
 > For backwards compatibility, `class_methods.order` and
 > `class_methods.method_type_order` are read from a `[tool.undersort]` table
 > (in `pyproject.toml`) or a top-level `[undersort]` table (in standalone
-> configs) when `[tool.preorder.class_methods]` is absent. The `enabled` flag
-> predates the legacy schema and is preorder-only. Prefer `[tool.preorder]`.
+> configs) when `[tool.pyreorder.class_methods]` is absent. The `enabled` flag
+> predates the legacy schema and is pyreorder-only. Prefer `[tool.pyreorder]`.
 
 ### Schema
 
@@ -48,13 +48,13 @@ barrier (see [Section layout](section-layout.md)).
 
 #### Minimal: defaults only
 
-No file required. `preorder` uses the canonical section order and `keep` strategy
+No file required. `pyreorder` uses the canonical section order and `keep` strategy
 everywhere except `enums`, which default to `alpha`.
 
 #### Recommended starting point
 
 ```toml
-[tool.preorder.module]
+[tool.pyreorder.module]
 sections = [
     "imports",
     "typing_imports",
@@ -68,12 +68,12 @@ sections = [
     "main_block",
 ]
 
-[tool.preorder.strategy]
+[tool.pyreorder.strategy]
 enums = "alpha"
 # functions = "stepdown"   # caller before callee (top-down narrative)
 # classes = "keep"
 
-[tool.preorder.class_methods]
+[tool.pyreorder.class_methods]
 enabled = true
 order = ["public", "protected", "private"]
 method_type_order = ["instance", "class", "static"]
@@ -85,7 +85,7 @@ Set a strategy only for the sections you care about. Omitted sections keep
 their original order (`keep`).
 
 ```toml
-[tool.preorder.strategy]
+[tool.pyreorder.strategy]
 enums = "alpha"
 functions = "stepdown"
 classes = "abstraction"
@@ -98,7 +98,7 @@ target matches `^[A-Z_][A-Z0-9_]*$` (e.g. `MAX_CONN`, `__version__`). Change the
 pattern to widen or narrow it:
 
 ```toml
-[tool.preorder.classification]
+[tool.pyreorder.classification]
 constants_pattern = "^[A-Z][A-Z0-9_]*$"
 ```
 
@@ -108,7 +108,7 @@ that is placed after `functions` and before `main_block`. By default only
 `__author__`, etc. near the bottom of the module too:
 
 ```toml
-[tool.preorder.classification]
+[tool.pyreorder.classification]
 dunder_exports_names = ["__all__", "__version__", "__author__"]
 ```
 
@@ -124,26 +124,26 @@ Five flags let you deviate from the file config without editing it:
 | `--strategy-overrides`   | Override per-section strategy, e.g. `functions=alpha`.                   |
 | `--class-methods-order`  | Override method visibility order, e.g. `private,public,protected`.       |
 | `--method-type-order`    | Override method-type order, e.g. `static,instance,class`.                |
-| `--fail` / `--no-fail`   | Control whether `preorder run` exits non-zero when files change (`run` only). |
+| `--fail` / `--no-fail`   | Control whether `pyreorder run` exits non-zero when files change (`run` only). |
 
 The order/type flags accept a **permutation** of `public`/`protected`/`private` or
 `instance`/`class`/`static` respectively; an invalid permutation warns and
 falls back to the configured order.
 
-`--fail` / `--no-fail` (`preorder run` only) controls the exit code when files
+`--fail` / `--no-fail` (`pyreorder run` only) controls the exit code when files
 were modified. The default is controlled by `[cli] fail_on_changed` (see
-below); `--no-fail` is useful when running `preorder` from a formatter task
+below); `--no-fail` is useful when running `pyreorder` from a formatter task
 that always writes and should not surface as a failure.
 
 ```shell
 # Only reorder the functions section, using step-down ordering:
-preorder run src/ --section-only functions --strategy-overrides functions=stepdown
+pyreorder run src/ --section-only functions --strategy-overrides functions=stepdown
 
 # Restrict to several sections; each reorders independently:
-preorder run src/ --section-only functions,classes --strategy-overrides functions=stepdown,classes=keep
+pyreorder run src/ --section-only functions,classes --strategy-overrides functions=stepdown,classes=keep
 
 # Reorder methods so private comes first, regardless of the file config:
-preorder run src/ --class-methods-order private,protected,public
+pyreorder run src/ --class-methods-order private,protected,public
 ```
 
 These map onto the corresponding `Config` fields and are resolved on top of
@@ -153,7 +153,7 @@ the discovered file config.
 
 ```toml
 [cli]
-# Exit non-zero when `preorder run` modifies files (default: true).
+# Exit non-zero when `pyreorder run` modifies files (default: true).
 # Pre-commit hooks and CI rely on this to detect drift. Override per-invocation
 # with `--no-fail` (useful from formatter tasks that always write).
 fail_on_changed = true
@@ -186,7 +186,7 @@ serially regardless of the ``jobs`` setting.
 
 ### `[discovery]` table
 
-Controls which files `preorder` scans when given a directory.
+Controls which files `pyreorder` scans when given a directory.
 
 ```toml
 [discovery]
@@ -203,34 +203,34 @@ flags (CLI patterns append, they do not replace).
 
 ### Opt-out directives
 
-- **Whole file:** a `# preorder: off` (or `# nosort`) comment anywhere in the
+- **Whole file:** a `# pyreorder: off` (or `# nosort`) comment anywhere in the
   module header skips the file entirely.
-- **Single class:** `class C:  # preorder: off` leaves that class's methods
+- **Single class:** `class C:  # pyreorder: off` leaves that class's methods
   untouched.
 
 ### Generating a config template
 
-`preorder config generate` produces a pyreorder.toml template from the current
+`pyreorder config generate` produces a pyreorder.toml template from the current
 config schema. Without options it prints the default template to stdout.
 
 ```shell
 # Print the default template
-preorder config generate
+pyreorder config generate
 
 # Write it to a file (must end in .toml)
-preorder config generate --output pyreorder.toml
+pyreorder config generate --output pyreorder.toml
 
 # Add explanatory comments for each setting
-preorder config generate --with-comments --output pyreorder.toml
+pyreorder config generate --with-comments --output pyreorder.toml
 
 # Merge values from an existing config (upgrade path for new versions):
 # recognized keys are carried forward; unknown/deprecated keys are dropped
 # with a warning on stderr.
-preorder config generate --with-config old-pyreorder.toml --output pyreorder.toml
+pyreorder config generate --with-config old-pyreorder.toml --output pyreorder.toml
 ```
 
 The schema is the single source of truth: `generate` only emits keys that the
-currently-installed preorder recognizes. This makes it the right tool for upgrading
+currently-installed pyreorder recognizes. This makes it the right tool for upgrading
 an old config when new options appear or old ones are removed.
 
 ### Programmatic configuration

@@ -61,7 +61,7 @@ If we hoist `_DEFAULT_COLOR` into the `module_constants` section ahead of
 `Color`, the import order at runtime is `_DEFAULT_COLOR = Color.RED` →
 `NameError: name 'Color' is not defined`.
 
-`preorder` needs a rule that says *when not to move a statement*.
+`pyreorder` needs a rule that says *when not to move a statement*.
 
 ## Considered options
 
@@ -85,10 +85,10 @@ and the surrounding barrier-free run of movable statements is reordered
 around it.
 
 A side effect of barriers is that any statement we **cannot classify** is
-also treated as a barrier. This is by design — `preorder`'s stance is "leave
+also treated as a barrier. This is by design — `pyreorder`'s stance is "leave
 unfamiliar code alone". The cost is occasional modules with strange
 top-level statements (third-party decorators, runtime-generated class
-attributes) that never move; the benefit is that `preorder` is safe to run on
+attributes) that never move; the benefit is that `pyreorder` is safe to run on
 a codebase it has never seen.
 
 ## Edge case: `from __future__ import annotations`
@@ -106,14 +106,14 @@ when the future import is present. See
 
 Positive:
 
-- `preorder` is safe to run on a module it has never seen.
+- `pyreorder` is safe to run on a module it has never seen.
 - Cycle tolerance: forward-reference detection handles cyclical
   module-level references by leaving the cycle in place.
 
 Negative:
 
 - The check is conservative — there are cases where a statement *could*
-  safely move because the runtime evaluation order is benign, but `preorder`
+  safely move because the runtime evaluation order is benign, but `pyreorder`
   will not move it. Users can split the assignment or use
   `Config.sections` to opt the statement into a fixed section.
 

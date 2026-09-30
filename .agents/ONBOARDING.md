@@ -14,7 +14,7 @@ imports/globals/constants/classes/methods into the correct order. Full docs at
 ```bash
 uv run pytest      # run the test suite
 uv build           # build wheel + sdist
-preorder check .      # verify files are already sorted
+pyreorder check .      # verify files are already sorted
 mise format-md     # format/lint markdown
 ```
 
@@ -36,7 +36,7 @@ mise format-md     # format/lint markdown
 
 ## Available tools
 
-- **preorder** — reorganize Python modules (CLI + `pyreorder` API)
+- **pyreorder** — reorganize Python modules (CLI + `pyreorder` API)
 - **mise / uv** — task running, env, build, format, lint
 - **codegraph** — symbol search, call graphs
 - **grepai** — find code by intent

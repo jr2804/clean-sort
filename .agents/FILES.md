@@ -21,6 +21,6 @@ Kept compact — agents hallucinate less when they know where definitions live.
 | Pipeline (Module reorder) | `src/pyreorder/pipeline.py` | `SectionSorter` |
 | In-class method sort | `src/pyreorder/undersort.py` | `MethodSorter` (project's own sorter) |
 | CLI (Typer app) | `src/pyreorder/cli/app.py` | `run`, `check`, `diff`, `config` |
-| Project config | `pyproject.toml` | `[tool.preorder]`, `[tool.preorder.module]`, `[tool.preorder.strategy]`, `[tool.preorder.class_methods]` |
+| Project config | `pyproject.toml` | `[tool.pyreorder]`, `[tool.pyreorder.module]`, `[tool.pyreorder.strategy]`, `[tool.pyreorder.class_methods]` |
 | Tooling tasks | `.config/mise/` | `format`, `format-md`, `lint`, `typecheck`, `spell` |
 | Agent skill | `skills/pyreorder/SKILL.md` | references `config.md`, `sort_programmatically.py` |

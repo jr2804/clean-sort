@@ -1,11 +1,11 @@
 ---
 name: pyreorder
-description: pyreorder (`preorder`) is an AST/CST-based structural sorter for Python source code. Use when the user wants to "sort", "reorder", "organize", or "clean up" the structure of Python files — grouping imports, constants, enums, dataclasses, classes, functions, and the `if __name__ == "__main__"` block into a canonical order; alphabetising or dependency-ordering functions (step-down rule); or reordering class methods by visibility (public/protected/private) and type (instance/class/static) like undersort. Triggers include "sort this module", "organize my python code", "put imports at the top", "step-down order my functions", "undersort this class", "sort methods by visibility", or running `preorder`. Prefer over manual reordering or over isort/ruff when the goal is *structural* (statement-level) ordering rather than import-only or formatting.
+description: pyreorder is an AST/CST-based structural sorter for Python source code. Use when the user wants to "sort", "reorder", "organize", or "clean up" the structure of Python files — grouping imports, constants, enums, dataclasses, classes, functions, and the `if __name__ == "__main__"` block into a canonical order; alphabetising or dependency-ordering functions (step-down rule); or reordering class methods by visibility (public/protected/private) and type (instance/class/static) like undersort. Triggers include "sort this module", "organize my python code", "put imports at the top", "step-down order my functions", "undersort this class", "sort methods by visibility", or running `pyreorder`. Prefer over manual reordering or over isort/ruff when the goal is *structural* (statement-level) ordering rather than import-only or formatting.
 ---
 
-# pyreorder (`preorder`)
+# pyreorder
 
-`preorder` reorders the **top-level statements** of a Python module into a
+`pyreorder` reorders the **top-level statements** of a Python module into a
 configurable section order and the **methods within each class** by visibility
 and type. It is built on `libcst`, so comments and formatting are preserved. It
 is a _structural_ sorter — it complements `ruff`/`isort` (imports) and `black`
@@ -14,8 +14,8 @@ is a _structural_ sorter — it complements `ruff`/`isort` (imports) and `black`
 ## Install
 
 ```shell
-uv tool install pyreorder                 # or: git+https://codeberg.org/jr2804/pyreorder
-preorder --version
+uv tool install pyreorder                 # or: git+https://github.com/jr2804/pyreorder
+pyreorder --version                       # `rord` is installed as a short alias
 ```
 
 ## When to use
@@ -26,21 +26,21 @@ preorder --version
   low-level-utilities-first (**abstraction**).
 - You want class methods grouped public → protected → private, instance → class
   → static (undersort semantics).
-- CI / pre-commit gate: `preorder check` exits non-zero if files aren't sorted.
+- CI / pre-commit gate: `pyreorder check` exits non-zero if files aren't sorted.
 
-Do **not** use preorder for import-only sorting (use `ruff`/`isort`) or for
-formatting (use `ruff format`/`black`). preorder composes with both — run it
+Do **not** use pyreorder for import-only sorting (use `ruff`/`isort`) or for
+formatting (use `ruff format`/`black`). pyreorder composes with both — run it
 _after_ formatters.
 
 ## CLI
 
 ```shell
-preorder run [PATHS...]            # sort in place (use `-` for stdin -> stdout)
-preorder check [PATHS...]          # exit 1 if any file would change (CI / pre-commit)
-preorder diff [PATHS...]           # print unified diffs
-preorder config generate [--output FILE] [--with-comments] [--with-config FILE]  # produce a config template (merge from existing)
-preorder config show               # print resolved config
-preorder --version
+pyreorder run [PATHS...]            # sort in place (use `-` for stdin -> stdout)
+pyreorder check [PATHS...]          # exit 1 if any file would change (CI / pre-commit)
+pyreorder diff [PATHS...]           # print unified diffs
+pyreorder config generate [--output FILE] [--with-comments] [--with-config FILE]  # produce a config template (merge from existing)
+pyreorder config show               # print resolved config
+pyreorder --version
 ```
 
 Common options: `--config PATH`, `--exclude/-x GLOB`, `--no-recursive`,
@@ -49,13 +49,13 @@ Common options: `--config PATH`, `--exclude/-x GLOB`, `--no-recursive`,
 
 ```shell
 # editor / pre-commit friendly:
-preorder run - < module.py > sorted.py
+pyreorder run - < module.py > sorted.py
 ```
 
 ## Configuration
 
-Discovered from (first wins, walking up): `--config`, `preorder.toml`,
-`.config/preorder.toml`, `[tool.preorder]` in `pyproject.toml`. `[tool.undersort]` is
+Discovered from (first wins, walking up): `--config`, `pyreorder.toml`,
+`.config/pyreorder.toml`, `[tool.pyreorder]` in `pyproject.toml`. `[tool.undersort]` is
 read for backwards-compatibility class-method ordering.
 
 ```toml
@@ -84,22 +84,22 @@ method_type_order = ["instance", "class", "static"]
 
 > **Caution:** `alpha` on `module_constants`/`classes`/`dataclasses` can break
 > runtime order (constants that reference each other; inheritance). Always
-> preview with `preorder diff` before applying.
+> preview with `pyreorder diff` before applying.
 
 ## Safety model
 
-preorder is conservative:
+pyreorder is conservative:
 
 - **Barriers:** statements that don't map to a configured section (e.g.
   `app = typer.Typer()`, runtime setup) are never moved. Recognised statements
-  only reorder _within_ their contiguous barrier-free run, so preorder never moves
+  only reorder _within_ their contiguous barrier-free run, so pyreorder never moves
   code across a statement it might depend on.
 - **Pinned:** the module docstring and `from __future__ import ...` always stay
   first.
-- **Opt-out:** a `# preorder: off` (or `# nosort`) comment in a file's header
+- **Opt-out:** a `# pyreorder: off` (or `# nosort`) comment in a file's header
   skips the file; the same comment on a class trailing line
-  (`class C:  # preorder: off`) skips that class.
-- **Idempotent:** running `preorder` twice never changes a file a second time.
+  (`class C:  # pyreorder: off`) skips that class.
+- **Idempotent:** running `pyreorder` twice never changes a file a second time.
 
 ## Opt-in import transforms
 
@@ -175,6 +175,6 @@ committed sorted output) live in `tests/data/` and demonstrate every strategy:
 | `inventory_models` | `alpha`       | alpha on enums + functions, rich undersort in one class |
 
 ```shell
-preorder diff tests/data/plugin_registry_unsorted.py
-preorder diff tests/data/inventory_models_unsorted.py
+pyreorder diff tests/data/plugin_registry_unsorted.py
+pyreorder diff tests/data/inventory_models_unsorted.py
 ```

@@ -7,7 +7,7 @@ hide:
 
 # Architecture Decision Records
 
-This directory records significant design decisions in `preorder`. Each ADR
+This directory records significant design decisions in `pyreorder`. Each ADR
 captures the **context**, the **options considered**, the **decision**, and
 the **consequences** of the choice.
 

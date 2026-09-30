@@ -1,10 +1,10 @@
 [project]
-site_name = "Preorder"
+site_name = "pyreorder"
 site_description = "AST-based structural sorter for Python source code"
 site_author = "Jan Reimes"
-site_url = "https://Jan Reimes.github.io/pyreorder"
-repo_url = "https://github.com/Jan Reimes/pyreorder"
-repo_name = "Jan Reimes/pyreorder"
+site_url = "https://jr2804.github.io/pyreorder"
+repo_url = "https://github.com/jr2804/pyreorder"
+repo_name = "jr2804/pyreorder"
 copyright = "Copyright &copy; 2026 Jan Reimes"
 nav = [
   { "Home" = [

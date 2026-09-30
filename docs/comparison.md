@@ -4,14 +4,14 @@ title: Comparison with other tools
 
 # Comparison with other tools
 
-`preorder` is one of several Python source-organisation tools. This page positions
+`pyreorder` is one of several Python source-organisation tools. This page positions
 it against the alternatives so you can pick the right tool for your codebase.
 
 ## At a glance
 
 | Tool | Scope | Strategy | Format-preserving | Touches class bodies | Touches imports |
 |---|---|---|---|---|---|
-| **preorder** | Whole module | Configurable (keep / alpha / stepdown / abstraction) | Yes (libcst) | Yes | No (forward-reference aware) |
+| **pyreorder** | Whole module | Configurable (keep / alpha / stepdown / abstraction) | Yes (libcst) | Yes | No (forward-reference aware) |
 | [isort][isort] | Imports only | Alphabetical by module, with case/known-first-party config | Yes | No | Yes |
 | [Ruff][ruff] `I001` | Imports only | Same engine as isort | Yes | No | Yes |
 | [undersort][undersort] | Class bodies only | Method category (dunder / init / public / private / …) | Yes | Yes | No |
@@ -35,10 +35,10 @@ statements. They group by source (stdlib / third-party / local), alphabetise
 within each group, and dedupe. They do not look at anything outside the
 imports block.
 
-`preorder` does **not** sort imports — it leaves the imports block alone. The
+`pyreorder` does **not** sort imports — it leaves the imports block alone. The
 rationale is that `isort` / Ruff already do this job perfectly, and combining
 two tools that both touch the same lines leads to merge conflicts and
-unpredictable diffs. Use both: `preorder` for everything except imports,
+unpredictable diffs. Use both: `pyreorder` for everything except imports,
 `isort` / Ruff for the imports themselves.
 
 ### Class bodies: `undersort`
@@ -47,10 +47,10 @@ unpredictable diffs. Use both: `preorder` for everything except imports,
 then public methods, then private methods. It does not touch anything
 outside the class body.
 
-`preorder` includes the same method ordering as part of its pipeline
-(`sorters.MethodSorter`), so if you already use `preorder` you do not need
+`pyreorder` includes the same method ordering as part of its pipeline
+(`sorters.MethodSorter`), so if you already use `pyreorder` you do not need
 `undersort`. The legacy `[tool.undersort]` table in `pyproject.toml` is
-honoured as a fallback when `[tool.preorder.class_methods]` is absent — see
+honoured as a fallback when `[tool.pyreorder.class_methods]` is absent — see
 [Configuration](configuration.md).
 
 ### Whole module: `ssort`, `sdsort`, `ABSort`
@@ -69,10 +69,10 @@ These three tools each take a different stance on statement ordering:
   Zhang-Shasha-based tie-breaking that reorders statements at the same
   abstraction level by AST similarity.
 
-`preorder`'s `stepdown` and `abstraction` strategies overlap with `sdsort` and
+`pyreorder`'s `stepdown` and `abstraction` strategies overlap with `sdsort` and
 `ABSort` respectively. The differences are practical:
 
-| | `preorder` | `ssort` / `sdsort` / `ABSort` |
+| | `pyreorder` | `ssort` / `sdsort` / `ABSort` |
 |---|---|---|
 | **Section ordering** | Configurable: imports → constants → runtime setup → functions → classes → main | Single global order (always topological) |
 | **Barriers** | Forward-reference aware; unrecognised statements stay put | No barriers — every statement is sortable |
@@ -82,28 +82,28 @@ These three tools each take a different stance on statement ordering:
 | **Imports** | No — delegated to `isort` / Ruff | No — same |
 | **Safety stance** | "leave unfamiliar code alone" | "reorder everything it can see" |
 
-## When to pick `preorder`
+## When to pick `pyreorder`
 
-`preorder` is the right tool when **at least two of these are true**:
+`pyreorder` is the right tool when **at least two of these are true**:
 
 - Your module has both a top-level structure (imports, constants, runtime
   setup, functions, classes) **and** class bodies that benefit from a fixed
   method order.
 - You want to delegate import sorting to `isort` / Ruff and have a single
   tool own the rest of the file.
-- You have code that `preorder` cannot classify — third-party decorators,
+- You have code that `pyreorder` cannot classify — third-party decorators,
   conditional `__all__` updates, runtime-generated class attributes — and
   you want those statements to **stay where they are**.
-- You care that reformatting the file with `preorder` does not introduce
+- You care that reformatting the file with `pyreorder` does not introduce
   whitespace, quote-style, or comment-position changes.
 
 ## When to pick something else
 
-- **Just imports?** Use `isort` or Ruff's `I001`. `preorder` will not touch
+- **Just imports?** Use `isort` or Ruff's `I001`. `pyreorder` will not touch
   them.
 - **Just class bodies?** `undersort` does it in one flag.
 - **Topological correctness is your top priority?** `ssort` is more
-  thorough: it never breaks a dependency. `preorder` is more conservative —
+  thorough: it never breaks a dependency. `pyreorder` is more conservative —
   it does not move code it cannot prove is safe to move.
 - **Top-down readability is your top priority?** `sdsort` makes the
   high-level logic sit at the top of every file, automatically.
@@ -117,8 +117,8 @@ A typical Python project can run all of these in sequence without
 conflict:
 
 ```bash
-# 1. Reorganise whole module (preorder)
-preorder src/
+# 1. Reorganise whole module (pyreorder)
+pyreorder src/
 
 # 2. Sort imports (isort or ruff)
 isort src/
@@ -129,7 +129,7 @@ black src/
 # or: ruff format src/
 ```
 
-`preorder` is designed to be run **first** because its forward-reference
+`pyreorder` is designed to be run **first** because its forward-reference
 barriers assume that other tools have not yet moved the imports block. Run
 `isort` and `black` afterward; their output is independent of the rest of
 the file.

@@ -6,7 +6,7 @@
 
 **AST-based Python module reorganizer.**
 
-`preorder` reorders the top-level statements of a Python module into a canonical
+`pyreorder` reorders the top-level statements of a Python module into a canonical
 section layout (imports → globals → constants → classes → functions → `main`)
 and reorders the methods inside each class by visibility and type. It is built
 on [`libcst`](https://github.com/Instagram/LibCST), so comments and formatting
@@ -20,16 +20,16 @@ other sorting tools (isort, undersort, etc.) or provide ruff subcommands.
 
 ```shell
 uv tool install pyreorder
-preorder --version
+pyreorder --version        # `rord` is installed as a short alias
 ```
 
 ## Quick start
 
 ```shell
-preorder run src/                 # sort files in place
-preorder check src/               # exit 1 if anything would change (CI / pre-commit)
-preorder diff src/                # preview changes
-preorder config generate          # write/print a pyreorder.toml template (--with-comments, --with-config)
+pyreorder run src/                 # sort files in place
+pyreorder check src/               # exit 1 if anything would change (CI / pre-commit)
+pyreorder diff src/                # preview changes
+pyreorder config generate          # write/print a pyreorder.toml template (--with-comments, --with-config)
 ```
 
 ### Before → after
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     main()
 ```
 
-`preorder run` (with `functions = "stepdown"`) produces:
+`pyreorder run` (with `functions = "stepdown"`) produces:
 
 ```python
 import sys
@@ -82,20 +82,20 @@ if __name__ == "__main__":
 ## Configuration
 
 Discovered from (first wins, walking up from the target file): `--config`,
-`pyreorder.toml`, `.config/pyreorder.toml`, `[tool.preorder]` in `pyproject.toml`.
+`pyreorder.toml`, `.config/pyreorder.toml`, `[tool.pyreorder]` in `pyproject.toml`.
 
 ```toml
-[tool.preorder.module]
+[tool.pyreorder.module]
 sections = [
     "imports", "typing_imports", "module_constants", "enums",
     "dataclasses", "classes", "functions", "dunder_exports", "main_block",
 ]
 
-[tool.preorder.strategy]            # per-section; omit => "keep"
+[tool.pyreorder.strategy]            # per-section; omit => "keep"
 enums = "alpha"
 functions = "stepdown"           # "alpha" | "stepdown" | "abstraction" | "keep"
 
-[tool.preorder.class_methods]       # undersort-style ordering within each class
+[tool.pyreorder.class_methods]       # undersort-style ordering within each class
 enabled = true
 order = ["public", "protected", "private"]
 method_type_order = ["instance", "class", "static"]
@@ -113,21 +113,21 @@ method_type_order = ["instance", "class", "static"]
 
 > **Caution:** `alpha` on `module_constants` / `classes` / `dataclasses` can
 > break runtime order (interdependent constants, inheritance). Always preview
-> with `preorder diff` first.
+> with `pyreorder diff` first.
 
 ## Safety model
 
-`preorder` is conservative by design:
+`pyreorder` is conservative by design:
 
 - **Barriers** — statements that don't map to a configured section (runtime
   setup like `app = typer.Typer()`) are never moved. Recognised statements only
-  reorder _within_ their contiguous barrier-free run, so preorder never moves code
+  reorder _within_ their contiguous barrier-free run, so pyreorder never moves code
   across a statement it might depend on.
 - **Pinned** — the module docstring and `from __future__ import ...` always stay
   first.
-- **Opt-out** — a `# preorder: off` (or `# nosort`) comment in a file's header
-  skips the file; `class C:  # preorder: off` skips that class.
-- **Idempotent** — running `preorder` twice never changes a file a second time.
+- **Opt-out** — a `# pyreorder: off` (or `# nosort`) comment in a file's header
+  skips the file; `class C:  # pyreorder: off` skips that class.
+- **Idempotent** — running `pyreorder` twice never changes a file a second time.
 
 ## Programmatic API
 
@@ -145,7 +145,7 @@ repos:
   - repo: https://github.com/jr2804/pyreorder
     rev: v0.1.0
     hooks:
-      - id: preorder
+      - id: pyreorder
 ```
 
 ## Agent skill
@@ -173,7 +173,7 @@ The in-class method sorter is an adapted reimplementation of
 function ordering was inspired by [ssort](https://github.com/bwhmather/ssort),
 [sdsort](https://github.com/eirikurt/sdsort) and
 [ABSort](https://github.com/MapleCCC/ABSort). See
-[Credits](https://github.com/jr2804/pyreorder/src/branch/main/docs/credits.md).
+[Credits](https://github.com/jr2804/pyreorder/blob/main/docs/credits.md).
 
 ## License
 

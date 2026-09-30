@@ -10,7 +10,7 @@ title: "ADR 0001: libcst for AST manipulation"
 
 ## Context and problem statement
 
-`preorder` reads Python source, reorders top-level statements and class members,
+`pyreorder` reads Python source, reorders top-level statements and class members,
 and writes the file back. The tool needs an AST representation that:
 
 - Survives a round-trip without changing formatting (quotes, parentheses,
@@ -34,9 +34,9 @@ for a *reorder-only* tool.
 
 Chosen option: **libcst**. Reasons:
 
-- Round-trip preservation lets `preorder` claim a safety property: a file that
+- Round-trip preservation lets `pyreorder` claim a safety property: a file that
   does not need reordering produces a byte-identical output. Users can run
-  `preorder` on CI with a `--check` flag and trust that the only diffs are
+  `pyreorder` on CI with a `--check` flag and trust that the only diffs are
   real reorders.
 - `libcst` carries whitespace, parentheses, and trailing comments as
   *metadata* on each node, so we never lose them when transforming the
@@ -46,7 +46,7 @@ Chosen option: **libcst**. Reasons:
   stage).
 
 The trade-off is performance: `libcst` is slower than `ast` for pure parse,
-and it holds the entire file in memory. For `preorder` this is acceptable
+and it holds the entire file in memory. For `pyreorder` this is acceptable
 because (a) files are bounded by Python's import-graph in practice and
 (b) the `cache.py` layer short-circuits unchanged files.
 

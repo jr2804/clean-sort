@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Documentation overhaul**: New `Architecture` page with two Mermaid
   pipeline diagrams (per-stage data flow and per-file work decomposition);
-  new `Comparison with other tools` page positioning `preorder` against
+  new `Comparison with other tools` page positioning `pyreorder` against
   `isort`, Ruff `I001`, `undersort`, `ssort`, `sdsort`, and `ABSort`
   (with verified references to each tool's documented behavior);
   new `Architecture Decision Records` directory under `docs/adr/` with
@@ -23,10 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Project rename**: clean-sort → pyreorder. New PyPI package name is
   `pyreorder` (the `clean-sort` name is unreservable due to PyPI's
   ultranormalization filter colliding with the existing `cleansort`
-  project). The CLI command is now `preorder`; the import name is
-  `pyreorder`; the source dir is `src/pyreorder/`. The skill is renamed
-  from `clean-sort` to `pyreorder`. The legacy `[tool.csort]` config
-  table is still honoured as a back-compat alias for `[tool.preorder]`.
+  project). The CLI command is `pyreorder` (short alias: `rord`); the
+  import name is `pyreorder`; the source dir is `src/pyreorder/`; the
+  config table is `[tool.pyreorder]`. The skill is renamed from
+  `clean-sort` to `pyreorder`. Legacy config/cache paths (`csort.*`,
+  `preorder.*`) are auto-migrated by `pyreorder.migrate`.
+
+  **Breaking:** the interim `preorder` spelling shipped by the 2026.9.x alpha
+  releases — CLI command, `[tool.preorder]` config table, and `# preorder: off`
+  disable directive — is replaced by `pyreorder`. No compatibility alias is
+  provided.
 
 - **`runtime_setup` section**: Module-level assignments to non-constant names
   (``logger = get_logger(__name__)``, ``app = typer.Typer()``) now group into
@@ -36,22 +42,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   to cover `runtime_setup` assignments, preventing `NameError` for
   assignments that reference later-defined names.
 
-- **`preorder config generate` subcommand**: produces a preorder.toml template from
+- **`pyreorder config generate` subcommand**: produces a pyreorder.toml template from
   the current config schema. Supports `--output FILE` (must end in `.toml`),
   `--with-comments` (explanatory comments for each setting), and `--with-config
   FILE` (merges recognized values from an existing config; invalid/deprecated
   keys are dropped with warnings). The schema is now the single source of truth
-  for recognized config keys. Replaces the old `preorder config init`.
+  for recognized config keys. Replaces the old `pyreorder config init`.
 
-- **Content-hash skip cache**: preorder now caches sorted-output hashes keyed by
+- **Content-hash skip cache**: pyreorder now caches sorted-output hashes keyed by
   ``(config_signature, source_hash)``. On repeat runs, files whose content hash
   matches the cached sorted hash are skipped entirely (no parse, no sort).
-  Default location: ``~/.cache/preorder/<project-slug>/cache.json``. Configurable
+  Default location: ``~/.cache/pyreorder/<project-slug>/cache.json``. Configurable
   via ``[cli] cache_dir``; disabled via ``[cli] cache = false`` or
   ``--no-cache``. Safe by construction: only skips files already in sorted
   state.
 
-- **Parallel file processing**: preorder can sort files in parallel using a
+- **Parallel file processing**: pyreorder can sort files in parallel using a
   process pool (``parallel_backend = "process"``, default) or thread pool
   (``"thread"``). Configure via ``[cli] jobs`` (0 = serial, negative = auto
   ``int(0.75*cpu_count())``) or ``--jobs``/``-j`` per-invocation. Stdin mode
@@ -62,9 +68,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   flags) and `recursive` (bool, default `true`; `--no-recursive` overrides).
 
 - **`--fail` / `--no-fail` CLI flag and `[cli] fail_on_changed` config**: Control whether
-  `preorder run` exits non-zero when files are modified. Default remains exit 1 on change
+  `pyreorder run` exits non-zero when files are modified. Default remains exit 1 on change
   (pre-commit/CI friendly); `--no-fail` (or `[cli] fail_on_changed = false`) exits 0, useful
-  when running preorder from a formatter task that always writes. `preorder check` is unaffected.
+  when running pyreorder from a formatter task that always writes. `pyreorder check` is unaffected.
 
 ### Fixed
 
@@ -81,4 +87,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   ``AnnAssign`` are excluded from the forward-reference check, since
   annotations are not evaluated at runtime.
 
-- Initial project structure from [copier-uv-plus](<https://github.com/Jan> Reimes/copier-uv-plus).
+- Initial project structure from [copier-uv-plus](https://github.com/jr2804/copier-uv-plus).

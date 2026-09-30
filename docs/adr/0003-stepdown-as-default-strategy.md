@@ -11,7 +11,7 @@ title: "ADR 0003: stepdown as the default strategy"
 ## Context and problem statement
 
 Within a configured section, statements have to be put in *some* order.
-`preorder` offers four strategies:
+`pyreorder` offers four strategies:
 
 - **`keep`** — preserve the original order.
 - **`alpha`** — alphabetise by statement name.

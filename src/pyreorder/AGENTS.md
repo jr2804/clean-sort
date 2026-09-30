@@ -34,7 +34,7 @@ Core library code. Config and the Typer CLI also live here (`config.py`, `cli/ap
 - `undersort.py` (`MethodSorter`) reorders in-class methods; it is this project's own sorter, not an external tool.
   Legacy users may still set `class_methods.order` and `class_methods.method_type_order` under a
   `[tool.undersort]` table (in `pyproject.toml`) or a top-level `[undersort]` table (in standalone
-  configs); `Config.load` falls back to that when `[tool.preorder.class_methods]` is absent. The CLI
+  configs); `Config.load` falls back to that when `[tool.pyreorder.class_methods]` is absent. The CLI
   mirrors both knobs with `--class-methods-order` and `--method-type-order` on every command.
 - Opt-in import transforms (`transforms.py`) are the only transforms that mutate code beyond reordering:
   `hoist_inline_imports` and `remove_type_checking`. Both default off, run as a pre-pass before
@@ -42,27 +42,27 @@ Core library code. Config and the Typer CLI also live here (`config.py`, `cli/ap
   `remove_type_checking` also dissolves `if TYPE_CHECKING: ... else: X = Any` fallback aliases
   (single-target assignments whose value resolves to `Any`), dropping the alias; any other code
   in the `else:` branch blocks the transform.
-- `preorder run` exits with code 1 when it modifies any file (pre-commit/CI friendly). This is governed
+- `pyreorder run` exits with code 1 when it modifies any file (pre-commit/CI friendly). This is governed
   by `Config.fail_on_changed` (default `True`), configurable via `[cli] fail_on_changed` and
-  overridable per-invocation with `--fail` / `--no-fail`. `preorder check` is unaffected and always
+  overridable per-invocation with `--fail` / `--no-fail`. `pyreorder check` is unaffected and always
   exits 1 when files would change.
 - File discovery is governed by `Config.exclude` (glob list) and `Config.recursive` (bool, default `True`),
   configurable via `[discovery]`. CLI `--exclude` patterns merge with (append to) the config list;
   `--no-recursive` overrides `recursive=true` per-invocation.
-- **Content-hash skip cache**: preorder caches the hash of sorted output keyed by ``(config_signature, source_hash)``.
+- **Content-hash skip cache**: pyreorder caches the hash of sorted output keyed by ``(config_signature, source_hash)``.
   On repeat runs, files whose content hash matches the cached sorted hash are skipped entirely (no parse,
   no sort). Default location: ``~/.cache/pyreorder/<project-slug>/cache.json``. Configurable via
   ``[cli] cache_dir``; disabled via ``[cli] cache = false`` or ``--no-cache``. The cache is safe by
   construction: it only skips files that are already in their sorted state.
-- **Parallel file processing**: preorder can sort files in parallel using a process pool
+- **Parallel file processing**: pyreorder can sort files in parallel using a process pool
   (``parallel_backend = "process"``, default) or thread pool (``"thread"``).
   Configure via ``[cli] jobs`` (0 = serial, negative = auto ``int(0.75*cpu_count())``)
   or ``--jobs``/``-j`` per-invocation. Stdin mode always runs serially.
 - **Config schema as source of truth**: ``CONFIG_SCHEMA`` in ``config.py`` drives
-  ``preorder config generate`` (the template builder) and validates ``--with-config``
+  ``pyreorder config generate`` (the template builder) and validates ``--with-config``
   merges. ``CONFIG_SCHEMA`` is the canonical list of recognized ``[section].key``
   paths; unknown keys are reported as invalid and dropped. The old
-  ``preorder config init`` is removed — ``generate`` replaces it.
+  ``pyreorder config init`` is removed — ``generate`` replaces it.
 
 ## Work Guidance
 
@@ -74,7 +74,7 @@ Core library code. Config and the Typer CLI also live here (`config.py`, `cli/ap
 - `uv run pytest src` (or the full suite)
 - `uv run ruff check src tests`
 - `uv run ty check src tests`
-- `preorder check src` — package files must already be sorted
+- `pyreorder check src` — package files must already be sorted
 
 ## Child DOX Index
 
