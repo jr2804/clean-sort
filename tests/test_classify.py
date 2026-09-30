@@ -66,6 +66,11 @@ def test_classify_dataclass() -> None:
     assert classify(node, Config()) == "dataclasses"
 
 
+def test_classify_dataclass_with_arguments() -> None:
+    node = _body("@dataclass(frozen=True)\nclass Pt:\n    x: int\n")[0]
+    assert classify(node, Config()) == "dataclasses"
+
+
 def test_classify_plain_class_and_function() -> None:
     assert classify(_body("class Foo:\n    pass\n")[0], Config()) == "classes"
     assert classify(_body("def foo():\n    pass\n")[0], Config()) == "functions"

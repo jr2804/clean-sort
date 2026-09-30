@@ -115,6 +115,9 @@ def _is_enum(class_node: cst.ClassDef) -> bool:
 def _is_dataclass(class_node: cst.ClassDef) -> bool:
     for decorator in class_node.decorators:
         inner = decorator.decorator
+        # Unwrap the call form so @dataclass(frozen=True) is recognised too.
+        if isinstance(inner, cst.Call):
+            inner = inner.func
         ident = inner.attr.value if isinstance(inner, cst.Attribute) else None
         if ident is None and isinstance(inner, cst.Name):
             ident = inner.value
