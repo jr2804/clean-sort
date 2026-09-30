@@ -24,4 +24,5 @@ Kept compact — agents hallucinate less when they know where definitions live.
 | Project config | `pyproject.toml` | `[tool.pyreorder]`, `[tool.pyreorder.module]`, `[tool.pyreorder.strategy]`, `[tool.pyreorder.class_methods]` |
 | Tooling tasks | `.config/mise/` | `format`, `format-md`, `lint`, `typecheck`, `spell` |
 | Type-checker config | `ty.toml` | `include` = `src`/`tests`; excludes the `tests/data` fixtures |
+| Documentation site | `zensical.toml` | nav, theme, mkdocstrings; sources in `docs/`, built and deployed to GitHub Pages by `.github/workflows/ci.yml` |
 | Agent skill | `skills/pyreorder/SKILL.md` | references `config.md`, `sort_programmatically.py` |
