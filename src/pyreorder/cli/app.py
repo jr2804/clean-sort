@@ -13,6 +13,7 @@ from __future__ import annotations
 import difflib
 import fnmatch
 import sys
+import time
 import warnings
 from hashlib import sha256
 from pathlib import Path
@@ -21,7 +22,7 @@ from typing import Annotated, cast
 import typer
 
 from pyreorder import VALID_STRATEGIES, Config, __version__, load_config, sort_source
-from pyreorder.cache import Cache, hash_text
+from pyreorder.cache import Cache, CacheEntry, hash_text
 from pyreorder.config import _VALID_MTYPES, _VALID_VIS, SectionStrategy, generate_config, validate_config_keys
 
 # `app`/`config_app` are runtime setup used by the decorators below; pyreorder treats
@@ -380,8 +381,8 @@ def _sort_one(args: tuple) -> tuple:  # noqa: ANN401
     """Worker: sort a single file. Module-level for Windows spawn.
 
     Returns ``(path_str, changed, error_msg, diff_text, cache_entries)``.
-    ``cache_entries`` is a dict of ``{key: sorted_hash}`` or ``None`` when
-    caching is disabled. The main process merges and writes these centrally.
+    ``cache_entries`` is a ``{key: CacheEntry}`` dict, or ``None`` when caching
+    is disabled. The main process merges and writes these centrally.
     """
     path_str, cfg_dict, mode, cache_path_str, config_sig = args
     from pathlib import Path  # noqa: PLC0415
@@ -396,7 +397,7 @@ def _sort_one(args: tuple) -> tuple:  # noqa: ANN401
     except OSError as exc:
         return (path_str, False, f"pyreorder: cannot read {path}: {exc}", "", None)
     # Cache lookup (read-only — no save)
-    cache_entries: dict[str, str] | None = None
+    cache_entries: dict[str, CacheEntry] | None = None
     if cache_path_str and config_sig and mode in ("run", "check"):
         cache = Cache(Path(cache_path_str), ttl_days=cfg.cache_ttl_days)
         cache.load()
@@ -411,7 +412,7 @@ def _sort_one(args: tuple) -> tuple:  # noqa: ANN401
     if cache_path_str and config_sig and mode in ("run", "check"):
         source_hash = hash_text(original)
         sorted_hash = hash_text(result if result != original else original)
-        cache_entries = {f"{config_sig}:{source_hash}": sorted_hash}
+        cache_entries = {f"{config_sig}:{source_hash}": {"hash": sorted_hash, "seen": time.time()}}
     if result == original:
         return (path_str, False, None, "", cache_entries)
     changed = True
@@ -480,7 +481,7 @@ def _process_files_parallel(
     with Executor(max_workers=jobs) as ex:
         results = list(ex.map(_sort_one, args_list))
     # Collect results in original file order; merge cache entries centrally
-    all_cache_entries: dict[str, str] = {}
+    all_cache_entries: dict[str, CacheEntry] = {}
     for path_str, changed_flag, error_msg, diff_text, cache_entries in results:
         if error_msg:
             typer.echo(error_msg, err=True)

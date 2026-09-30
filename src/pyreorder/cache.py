@@ -21,7 +21,14 @@ import json
 import time
 from hashlib import sha256
 from pathlib import Path
-from typing import Any
+from typing import TypedDict
+
+
+class CacheEntry(TypedDict):
+    """One cache entry: the sorted-output hash and its last-seen epoch seconds."""
+
+    hash: str
+    seen: float
 
 
 class Cache:
@@ -39,7 +46,7 @@ class Cache:
 
     def __init__(self, path: Path | None, *, ttl_days: int = 30) -> None:
         self._path = path
-        self._entries: dict[str, dict[str, Any]] = {}
+        self._entries: dict[str, CacheEntry] = {}
         self._dirty = False
         self._ttl_days = ttl_days
 
@@ -64,7 +71,7 @@ class Cache:
                 self._entries = {}
                 return
             now = time.time()
-            migrated: dict[str, dict[str, Any]] = {}
+            migrated: dict[str, CacheEntry] = {}
             for k, v in data.items():
                 if not isinstance(k, str):
                     continue
@@ -117,12 +124,12 @@ class Cache:
             return
         self._path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self._path.with_suffix(self._path.suffix + ".tmp")
-        payload: dict[str, Any] = self._entries
+        payload: dict[str, CacheEntry] = self._entries
         tmp.write_text(json.dumps(payload), encoding="utf-8")
         tmp.replace(self._path)
         self._dirty = False
 
-    def merge(self, entries: dict[str, dict[str, Any]]) -> None:
+    def merge(self, entries: dict[str, CacheEntry]) -> None:
         """Merge external cache entries (e.g. from parallel workers) into this cache."""
         for key, value in entries.items():
             if self._entries.get(key) != value:

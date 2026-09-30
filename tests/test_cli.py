@@ -7,7 +7,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from pyreorder import Config
-from pyreorder.cli.app import _process_files_parallel, app
+from pyreorder.cli.app import _process_files_parallel, _sort_one, app
 
 # ----------------------------------------------------------- --fail/--no-fail
 _UNSORTED = "ZEBRA = 1\nAPPLE = 2\n"
@@ -494,3 +494,17 @@ def test_parallel_process_pool_direct(tmp_path: Path) -> None:
     code, changed = _process_files_parallel(files, cfg, "check", jobs=4, backend="process")
     assert code == 0
     assert len(changed) == 0
+
+
+def test_sort_one_worker_emits_wellformed_cache_entries(tmp_path: Path) -> None:
+    """Parallel workers must emit ``{hash, seen}`` cache entries, not bare hashes."""
+    target = tmp_path / "m.py"
+    target.write_text("X = 1\n", encoding="utf-8")
+    args = (str(target), {}, "check", str(tmp_path / "cache.json"), "sig")
+    _path, _changed, error, _diff, entries = _sort_one(args)
+    assert error is None
+    assert entries is not None
+    entry = next(iter(entries.values()))
+    assert isinstance(entry, dict), f"worker emitted {type(entry).__name__}, expected a {{hash, seen}} dict"
+    assert isinstance(entry.get("hash"), str)
+    assert isinstance(entry.get("seen"), float)
