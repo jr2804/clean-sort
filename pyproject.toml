@@ -40,6 +40,12 @@ dev = [
     "ghp-import>=2.1",
 ]
 
+[project.urls]
+Homepage = "https://jr2804.github.io/pyreorder/"
+Repository = "https://github.com/jr2804/pyreorder"
+Issues = "https://github.com/jr2804/pyreorder/issues"
+Changelog = "https://github.com/jr2804/pyreorder/blob/main/CHANGELOG.md"
+
 [project.scripts]
 pyreorder = "pyreorder.cli.app:main"
 rord = "pyreorder.cli.app:main"
