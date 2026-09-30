@@ -1,6 +1,7 @@
 # pyreorder
 
-[![status: alpha](https://img.shields.io/badge/status-alpha-orange)](https://github.com/jr2804/pyreorder)
+[![status: beta](https://img.shields.io/badge/status-beta-yellow)](https://github.com/jr2804/pyreorder)
+[![docs](https://img.shields.io/badge/docs-jr2804.github.io-blue)](https://jr2804.github.io/pyreorder/)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![python](https://img.shields.io/badge/python-3.11+-blue)](https://www.python.org)
 
@@ -31,6 +32,9 @@ pyreorder check src/               # exit 1 if anything would change (CI / pre-c
 pyreorder diff src/                # preview changes
 pyreorder config generate          # write/print a pyreorder.toml template (--with-comments, --with-config)
 ```
+
+A short alias `rord` is installed alongside `pyreorder`, so every command also
+works as `rord run src/`, `rord check src/`, `rord diff src/`, and so on.
 
 ### Before → after
 
@@ -138,16 +142,6 @@ cfg = Config(strategies={"functions": "stepdown"})
 sorted_text = sort_source(source_text, cfg)
 ```
 
-## Pre-commit
-
-```yaml
-repos:
-  - repo: https://github.com/jr2804/pyreorder
-    rev: v0.1.0
-    hooks:
-      - id: pyreorder
-```
-
 ## Agent skill
 
 An installable agent skill lives in [`skills/pyreorder`](skills/pyreorder).
@@ -157,14 +151,15 @@ Install it for your AI assistant:
 bun x skills add https://github.com/jr2804/pyreorder.git -s pyreorder -a universal -y
 ```
 
-## Development
+## Documentation
 
-```shell
-uv sync --dev           # install dev dependencies
-uv run pytest           # tests
-uvx ruff check .        # lint
-uvx ruff format .       # format
-```
+Full documentation: **<https://jr2804.github.io/pyreorder/>** — architecture,
+configuration reference, section layout, sorting modes, comparison with other
+tools, ADRs, and the API reference.
+
+Contributor setup, the check/test tasks, the docs build, pre-commit hooks, and
+the release process are on the
+[Development](https://jr2804.github.io/pyreorder/development/) page.
 
 ## Acknowledgements
 

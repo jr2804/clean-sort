@@ -22,6 +22,7 @@ nav = [
   ] },
   { "API reference" = "reference/api.md" },
   { "Development" = [
+    { "Development" = "development.md" },
     { "Contributing" = "contributing.md" },
     { "Code of Conduct" = "code_of_conduct.md" },
     { "ADRs" = "adr/index.md" },
@@ -82,7 +83,7 @@ toggle.name = "Switch to system preference"
 # ----------------------------------------------------------------------------
 [[project.extra.social]]
 icon = "fontawesome/brands/github"
-link = "https://github.com/Jan Reimes"
+link = "https://github.com/jr2804"
 
 [[project.extra.social]]
 icon = "fontawesome/brands/python"

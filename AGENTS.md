@@ -91,7 +91,7 @@ When the user requests a durable behavior change, record it here or in the relev
 
 - `src/pyreorder/` — primary package: AST-based module reorganization (`src/pyreorder/AGENTS.md`)
 - `tests/` — pytest suite and behavioral expectations (`tests/AGENTS.md`)
-- `docs/` — MkDocs user-facing documentation (no child AGENTS.md yet)
+- `docs/` — Zensical user-facing documentation (no child AGENTS.md yet)
 - `.config/mise/` — mise task/tooling definitions (no child AGENTS.md yet)
 - `skills/pyreorder/` — bundled agent skill (`SKILL.md` + references; no child AGENTS.md yet)
 
