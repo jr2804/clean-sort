@@ -134,6 +134,11 @@ emoji_index = "zensical.extensions.emoji.twemoji"
 [project.markdown_extensions.pymdownx.snippets]
 check_paths = true
 [project.markdown_extensions.pymdownx.superfences]
+# Declaring custom_fences REPLACES Zensical's default list, so the built-in
+# mermaid fence has to be repeated here or diagrams render as raw code blocks.
+[[project.markdown_extensions.pymdownx.superfences.custom_fences]]
+name = "mermaid"
+class = "mermaid"
 [[project.markdown_extensions.pymdownx.superfences.custom_fences]]
 name = "python"
 class = "python"
