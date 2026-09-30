@@ -48,7 +48,7 @@ The results will be appended below.
   reordering (`hoist_inline_imports`, `remove_type_checking`). Both default
   off.
 - `src/pyreorder/config.py` is the single source of truth for recognized
-  config keys; the `preorder config generate` subcommand reads it.
+  config keys; the `pyreorder config generate` subcommand reads it.
 - `src/pyreorder/undersort.py` (`MethodSorter`) provides in-class method
   ordering; the legacy `[tool.undersort]` table is honoured as a fallback.
 

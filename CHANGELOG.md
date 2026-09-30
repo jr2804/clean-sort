@@ -25,14 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   ultranormalization filter colliding with the existing `cleansort`
   project). The CLI command is `pyreorder` (short alias: `rord`); the
   import name is `pyreorder`; the source dir is `src/pyreorder/`; the
-  config table is `[tool.pyreorder]`. The skill is renamed from
-  `clean-sort` to `pyreorder`. Legacy config/cache paths (`csort.*`,
-  `preorder.*`) are auto-migrated by `pyreorder.migrate`.
-
-  **Breaking:** the interim `preorder` spelling shipped by the 2026.9.x alpha
-  releases — CLI command, `[tool.preorder]` config table, and `# preorder: off`
-  disable directive — is replaced by `pyreorder`. No compatibility alias is
-  provided.
+  config table is `[tool.pyreorder]`; the disable directive is
+  `# pyreorder: off`. The skill is renamed from `clean-sort` to
+  `pyreorder`. Legacy `csort.*` config/cache paths are auto-migrated by
+  `pyreorder.migrate`; no other compatibility aliases are provided.
 
 - **`runtime_setup` section**: Module-level assignments to non-constant names
   (``logger = get_logger(__name__)``, ``app = typer.Typer()``) now group into

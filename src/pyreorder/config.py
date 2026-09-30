@@ -10,7 +10,7 @@ Config is read from (first match wins, walking up from the target file):
 .. note::
 
     On first invocation, legacy config file names (``csort.toml``,
-    ``preorder.toml``, etc.) are auto-migrated to the current scheme via
+    ``clean-sort.toml``, etc.) are auto-migrated to the current scheme via
     :func:`pyreorder.migrate.migrate_if_needed`. See that module for the
     exact rename table and the sentinel-based idempotency mechanism.
 

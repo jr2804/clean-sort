@@ -25,4 +25,4 @@ Acts as simple long-term memory for the project.
 | 2026-07-08 | Implemented core sorting (alpha/stepdown/abstraction), config discovery, CLI (run/check/diff), 53 tests | First usable release | 2026.7.8.1 |
 | 2026-09-30 | Moved canonical home Codeberg -> GitHub; releases now publish to PyPI (trusted publishing) | `clean-sort` was unreservable on PyPI (collides with existing `cleansort`) | d24dbac |
 | 2026-09-30 | Renamed project clean-sort -> `pyreorder` (PyPI, import, source dir, skill) | Name free on PyPI and unambiguous | d24dbac |
-| 2026-09-30 | Fixed interim CLI/config/directive name `preorder` -> `pyreorder` (+ `rord` alias); clean break, **no** `preorder` compatibility alias | The refactor dropped the "y"; `preorder` is a tree traversal order and wrong. Alpha only, so no deprecation window | d5421a5 |
+| 2026-09-30 | Standardised the public surface on `pyreorder`: CLI `pyreorder` (+ `rord` short alias), `[tool.pyreorder]` table, `# pyreorder: off` directive; clean break, only auto-migrated `csort.*` paths retained | Consistent with the package and import name | d5421a5 |

@@ -4,7 +4,7 @@ Tests use pytest's ``tmp_path`` fixture for an isolated filesystem and
 ``monkeypatch`` to redirect HOME so we don't touch the real user dir.
 
 Covered:
-  - per-project config file rename (csort.toml, preorder.toml -> pyreorder.toml)
+  - per-project config file rename (csort.toml, clean-sort.toml -> pyreorder.toml)
   - global config rename (~/.config/<old>/<old_filename> -> ~/.config/<new>/<new_filename>)
   - user-cache rename (~/.cache/<old>/ -> ~/.cache/<new>/)
   - project-cache rename (./.<old>-cache/ -> ./.<new>-cache/)
@@ -51,15 +51,6 @@ def fs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 # --- Per-project config -----------------------------------------------
 
 
-def test_per_project_preorder_to_pyreorder(fs: Path) -> None:
-    (fs / "preorder.toml").write_text("# interim\n", encoding="utf-8")
-    report = migrate_legacy_config(project_root=fs)
-    assert len(report.renamed) == 1
-    assert (fs / PER_PROJECT_CONFIG_NEW).exists()
-    assert (fs / PER_PROJECT_CONFIG_NEW).read_text() == "# interim\n"
-    assert not (fs / "preorder.toml").exists()
-
-
 def test_per_project_csort_to_pyreorder(fs: Path) -> None:
     (fs / "csort.toml").write_text("# legacy\n", encoding="utf-8")
     report = migrate_legacy_config(project_root=fs)
@@ -69,10 +60,10 @@ def test_per_project_csort_to_pyreorder(fs: Path) -> None:
 
 def test_pyproject_unaffected(fs: Path) -> None:
     pyproject = fs / "pyproject.toml"
-    pyproject.write_text('[tool.preorder]\nstrategy = "keep"\n', encoding="utf-8")
+    pyproject.write_text('[tool.csort]\nstrategy = "keep"\n', encoding="utf-8")
     (fs / "csort.toml").write_text("# legacy\n", encoding="utf-8")
     migrate_legacy_config(project_root=fs)
-    assert pyproject.read_text() == '[tool.preorder]\nstrategy = "keep"\n'
+    assert pyproject.read_text() == '[tool.csort]\nstrategy = "keep"\n'
     assert (fs / PER_PROJECT_CONFIG_NEW).exists()
 
 
@@ -95,14 +86,14 @@ def test_does_not_overwrite_existing_new(fs: Path) -> None:
 
 def test_global_config_rename(fs: Path) -> None:
     home = Path(os.environ["HOME"])
-    old_dir = home / ".config" / "preorder"
+    old_dir = home / ".config" / "csort"
     old_dir.mkdir(parents=True)
-    (old_dir / "preorder.toml").write_text("# legacy\n", encoding="utf-8")
+    (old_dir / "csort.toml").write_text("# legacy\n", encoding="utf-8")
     migrate_legacy_config(project_root=fs)
     new_dir = home / ".config" / GLOBAL_CONFIG_SUBDIR_NEW
     assert (new_dir / GLOBAL_CONFIG_FILENAME_NEW).exists()
     assert (new_dir / GLOBAL_CONFIG_FILENAME_NEW).read_text() == "# legacy\n"
-    assert not (old_dir / "preorder.toml").exists()
+    assert not (old_dir / "csort.toml").exists()
 
 
 # --- Cache -------------------------------------------------------------
@@ -110,7 +101,7 @@ def test_global_config_rename(fs: Path) -> None:
 
 def test_user_cache_rename(fs: Path) -> None:
     home = Path(os.environ["HOME"])
-    old = home / ".cache" / "preorder"
+    old = home / ".cache" / "csort"
     old.mkdir(parents=True)
     (old / "someproject").mkdir()
     (old / "someproject" / "cache.json").write_text("{}", encoding="utf-8")
@@ -122,11 +113,11 @@ def test_user_cache_rename(fs: Path) -> None:
 
 
 def test_project_cache_rename(fs: Path) -> None:
-    (fs / ".preorder-cache").mkdir()
-    (fs / ".preorder-cache" / "x.json").write_text("x", encoding="utf-8")
+    (fs / ".csort-cache").mkdir()
+    (fs / ".csort-cache" / "x.json").write_text("x", encoding="utf-8")
     migrate_legacy_cache(project_root=fs)
     assert (fs / PER_PROJECT_CACHE_NEW / "x.json").exists()
-    assert not (fs / ".preorder-cache").exists()
+    assert not (fs / ".csort-cache").exists()
 
 
 # --- Idempotency -------------------------------------------------------
@@ -156,12 +147,12 @@ def test_migrate_combined(fs: Path) -> None:
     """End-to-end: per-project, global config, user cache, project cache."""
     home = Path(os.environ["HOME"])
     (fs / "csort.toml").write_text("# cfg\n", encoding="utf-8")
-    (home / ".config" / "preorder").mkdir(parents=True)
-    (home / ".config" / "preorder" / "preorder.toml").write_text("# gcfg\n", encoding="utf-8")
-    (home / ".cache" / "preorder").mkdir(parents=True)
-    (home / ".cache" / "preorder" / "abc").mkdir()
-    (fs / ".preorder-cache").mkdir()
-    (fs / ".preorder-cache" / "y").write_text("z", encoding="utf-8")
+    (home / ".config" / "csort").mkdir(parents=True)
+    (home / ".config" / "csort" / "csort.toml").write_text("# gcfg\n", encoding="utf-8")
+    (home / ".cache" / "csort").mkdir(parents=True)
+    (home / ".cache" / "csort" / "abc").mkdir()
+    (fs / ".csort-cache").mkdir()
+    (fs / ".csort-cache" / "y").write_text("z", encoding="utf-8")
     report = migrate(project_root=fs)
     assert len(report.renamed) >= 4
     assert (fs / PER_PROJECT_CONFIG_NEW).exists()

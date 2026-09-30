@@ -1,8 +1,8 @@
 """Auto-migrate legacy pyreorder config and cache paths to the current scheme.
 
 When the project was renamed from clean-sort -> pyreorder (and the per-project
-config from csort.toml -> pyreorder.toml, the global config from preorder.toml ->
-config.toml, and the cache from preorder/ -> pyreorder/), users who had alpha-
+config from csort.toml -> pyreorder.toml, the global config from csort.toml ->
+config.toml, and the cache from csort/ -> pyreorder/), users who had alpha-
 tested the tool ended up with files at the OLD paths. This module detects them
 and renames them to the NEW paths, preserving data and logging each move.
 
@@ -60,19 +60,19 @@ from typing import Literal, TextIO
 # in two years) is a one-line change.
 
 # Per-project config file (in cwd). Jev G1.
-PER_PROJECT_CONFIG_OLD = "preorder.toml"
+PER_PROJECT_CONFIG_OLD = "csort.toml"
 PER_PROJECT_CONFIG_NEW = "pyreorder.toml"
 
 # Global (per-user) config subdirectory + filename. Jev G2 + G3.
-GLOBAL_CONFIG_SUBDIR_OLD = "preorder"
+GLOBAL_CONFIG_SUBDIR_OLD = "csort"
 GLOBAL_CONFIG_SUBDIR_NEW = "pyreorder"
-GLOBAL_CONFIG_FILENAME_OLD = "preorder.toml"
+GLOBAL_CONFIG_FILENAME_OLD = "csort.toml"
 GLOBAL_CONFIG_FILENAME_NEW = "config.toml"
 
 # Cache directory. Jev G4.
-CACHE_DIR_OLD = "preorder"
+CACHE_DIR_OLD = "csort"
 CACHE_DIR_NEW = "pyreorder"
-PER_PROJECT_CACHE_OLD = ".preorder-cache"
+PER_PROJECT_CACHE_OLD = ".csort-cache"
 PER_PROJECT_CACHE_NEW = ".pyreorder-cache"
 
 # Skills asset straggler (the only remaining 'csort' reference in the repo).
@@ -80,7 +80,7 @@ SKILLS_ASSET_OLD = "csort.toml"
 SKILLS_ASSET_NEW = "pyreorder.toml"
 
 # Sentinels
-MIGRATE_SENTINEL_FILENAME = ".migrated-from-preorder"
+MIGRATE_SENTINEL_FILENAME = ".migrated-from-csort"
 
 
 @dataclass(frozen=True)
@@ -186,18 +186,17 @@ def migrate_legacy_config(
     report = MigrationReport()
 
     # 1. Per-project config: any of the legacy names we know about.
-    for old_name in (PER_PROJECT_CONFIG_OLD, "csort.toml", "clean-sort.toml"):
+    for old_name in (PER_PROJECT_CONFIG_OLD, "clean-sort.toml"):
         report.results.append(
             _rename_file(root / old_name, root / PER_PROJECT_CONFIG_NEW)
         )
 
     # 2. Global config: walk all the candidate subdir names that might have been used.
-    for old_sub in (GLOBAL_CONFIG_SUBDIR_OLD, "csort", "clean-sort"):
+    for old_sub in (GLOBAL_CONFIG_SUBDIR_OLD, "clean-sort"):
         old_dir = h / ".config" / old_sub
         new_dir = h / ".config" / GLOBAL_CONFIG_SUBDIR_NEW
         for old_filename in (
             GLOBAL_CONFIG_FILENAME_OLD,
-            "csort.toml",
             "clean-sort.toml",
             "config.toml",
         ):
@@ -219,13 +218,13 @@ def migrate_legacy_cache(
     report = MigrationReport()
 
     # 1. User-level cache
-    for old_name in (CACHE_DIR_OLD, "csort", "clean-sort"):
+    for old_name in (CACHE_DIR_OLD, "clean-sort"):
         old = h / ".cache" / old_name
         new = h / ".cache" / CACHE_DIR_NEW
         report.results.append(_rename_dir(old, new))
 
     # 2. Project-relative cache
-    for old_name in (PER_PROJECT_CACHE_OLD, ".csort-cache", ".clean-sort-cache"):
+    for old_name in (PER_PROJECT_CACHE_OLD, ".clean-sort-cache"):
         old = root / old_name
         new = root / PER_PROJECT_CACHE_NEW
         report.results.append(_rename_dir(old, new))
