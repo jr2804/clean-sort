@@ -1,20 +1,54 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-label="pyreorder">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="1200" height="420" role="img" aria-label="pyreorder — reorders a Python module's top-level statements into a canonical section layout, shown as a before-and-after code comparison">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0f766e"/>
-      <stop offset="100%" stop-color="#134e4a"/>
+      <stop offset="0%" stop-color="#04211f"/>
+      <stop offset="55%" stop-color="#0b3f3a"/>
+      <stop offset="100%" stop-color="#0f766e"/>
     </linearGradient>
-    <linearGradient id="accent" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.85"/>
-      <stop offset="100%" stop-color="#7e22ce" stop-opacity="0.85"/>
-    </linearGradient>
+    <radialGradient id="glow" cx="82%" cy="6%" r="72%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <rect width="1200" height="300" fill="url(#bg)"/>
-  <rect x="40" y="40" width="1120" height="220" rx="14" fill="url(#accent)"/>
-  <g font-family="ui-sans-serif, system-ui, sans-serif" fill="#f0fdfa">
-    <text x="80" y="135" font-size="64" font-weight="700">pyreorder</text>
-    <text x="80" y="180" font-size="22" font-weight="400" opacity="0.92">AST-based structural sorter for Python source code</text>
-    <text x="80" y="225" font-size="18" font-weight="500" opacity="0.85">preserve semantics · libcst round-trip · forward-reference barriers</text>
+
+  <rect width="1200" height="420" fill="url(#bg)"/>
+  <rect width="1200" height="420" fill="url(#glow)"/>
+
+  <text x="56" y="118" font-family="ui-monospace, SFMono-Regular, Cascadia Mono, Consolas, monospace" font-size="20" letter-spacing="3" fill="#5eead4">PYTHON SOURCE ORGANISER</text>
+  <text x="56" y="196" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="76" font-weight="800" letter-spacing="-1" fill="#f0fdfa">pyreorder</text>
+  <text x="56" y="246" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="21" fill="#ccfbf1">Reorders a module's top-level statements into a</text>
+  <text x="56" y="274" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="21" fill="#ccfbf1">canonical section layout — formatting preserved.</text>
+  <text x="56" y="330" font-family="ui-monospace, SFMono-Regular, Cascadia Mono, Consolas, monospace" font-size="18" fill="#7dd3c0">libcst · Python 3.11+ · MIT · CLI: pyreorder / rord</text>
+
+  <g>
+    <rect x="640" y="84" width="232" height="252" rx="14" fill="#ffffff" fill-opacity="0.06" stroke="#5eead4" stroke-opacity="0.35" stroke-width="1.5"/>
+    <text x="656" y="116" font-family="ui-monospace, SFMono-Regular, Cascadia Mono, Consolas, monospace" font-size="18" letter-spacing="2" fill="#5eead4">BEFORE</text>
+    <g font-family="ui-monospace, SFMono-Regular, Cascadia Mono, Consolas, monospace" font-size="20" fill="#e6fffb">
+      <text x="656" y="154"><tspan fill="#c4b5fd">import</tspan> sys</text>
+      <text x="656" y="206"><tspan fill="#c4b5fd">def</tspan> main():</text>
+      <text x="680" y="232">greet()</text>
+      <text x="656" y="284">MAX_CONN = 10</text>
+      <text x="656" y="310"><tspan fill="#c4b5fd">class</tspan> Service:</text>
+    </g>
   </g>
+
+  <g stroke="#a855f7" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M880 210 H908"/>
+    <path d="M898 200 L908 210 L898 220"/>
+  </g>
+
+  <g>
+    <rect x="916" y="84" width="232" height="252" rx="14" fill="#ffffff" fill-opacity="0.06" stroke="#5eead4" stroke-opacity="0.35" stroke-width="1.5"/>
+    <text x="932" y="116" font-family="ui-monospace, SFMono-Regular, Cascadia Mono, Consolas, monospace" font-size="18" letter-spacing="2" fill="#5eead4">AFTER</text>
+    <g font-family="ui-monospace, SFMono-Regular, Cascadia Mono, Consolas, monospace" font-size="20" fill="#e6fffb">
+      <text x="932" y="154"><tspan fill="#c4b5fd">import</tspan> sys</text>
+      <text x="932" y="206">MAX_CONN = 10</text>
+      <text x="932" y="232"><tspan fill="#c4b5fd">class</tspan> Service:</text>
+      <text x="932" y="284"><tspan fill="#c4b5fd">def</tspan> main():</text>
+      <text x="956" y="310">greet()</text>
+    </g>
+  </g>
+
+  <text x="640" y="382" font-family="ui-monospace, SFMono-Regular, Cascadia Mono, Consolas, monospace" font-size="18" fill="#7dd3c0">the same statements, in canonical order</text>
 </svg>
