@@ -30,7 +30,7 @@ Examples of unacceptable behavior:
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the project maintainers at <Jan.Reimes@head-acoustics.com>.
+reported to the project maintainers at <github@jan-reimes.de>.
 All complaints will be reviewed and investigated.
 
 ## Attribution
