@@ -58,3 +58,4 @@ ruff_*.txt
 
 # Beads / Dolt files (added by bd init)
 *.gate.lock*
+/.beads/.auto-import-issues.jsonl
