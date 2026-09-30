@@ -73,6 +73,45 @@ jobs:
         echo "version=$version" >> "$GITHUB_OUTPUT"
         echo "needs_tag=true" >> "$GITHUB_OUTPUT"
 
+    - name: Stamp the changelog
+      if: steps.version.outputs.needs_tag == 'true'
+      run: |
+        set -euo pipefail
+        version="${{ steps.version.outputs.version }}"
+        release_date="$(date -u +%Y-%m-%d)"
+        uv run python - "$version" "$release_date" <<'PY'
+        import re
+        import sys
+        from pathlib import Path
+
+        version, release_date = sys.argv[1], sys.argv[2]
+        path = Path("CHANGELOG.md")
+        text = path.read_text(encoding="utf-8")
+        stamped, count = re.subn(
+            r"^## \[Unreleased\]\s*$",
+            f"## [{version}] - {release_date}",
+            text,
+            count=1,
+            flags=re.MULTILINE,
+        )
+        if not count:
+            print("No [Unreleased] section; nothing to stamp.")
+            sys.exit(0)
+        path.write_text(stamped, encoding="utf-8")
+        print(f"Stamped [Unreleased] as [{version}] - {release_date}.")
+        PY
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        if git diff --quiet -- CHANGELOG.md; then
+          echo "Changelog unchanged; skipping commit."
+          exit 0
+        fi
+        git add CHANGELOG.md
+        # [skip release] keeps this push from starting a second release run; the
+        # tag step below tags this commit, so the tag carries the stamped file.
+        git commit -m "chore: stamp the changelog for ${version} [skip release]"
+        git push origin HEAD:main
+
     - name: Create and push tag
       if: steps.version.outputs.needs_tag == 'true'
       run: |

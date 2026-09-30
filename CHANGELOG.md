@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Documentation site is published**: `ci.yml` deploys the built site to GitHub
+  Pages from `main`, and the repository homepage and `[project.urls]` point at it.
+- **Development page** covering setup, the `mise` tasks, testing, type checking,
+  the docs build, pre-commit hooks, the release process, and the project layout.
+
+### Changed
+
+- **Project status is beta** (`Development Status :: 4 - Beta`).
+- The release workflow now **stamps `[Unreleased]`** in `CHANGELOG.md` with the new
+  CalVer version and date before tagging, so a released change never stays listed
+  as "Unreleased".
+- Maintainer address in the package metadata, code of conduct, and beads export
+  replaced with a placeholder.
+
+### Fixed
+
+- **Mermaid diagrams render.** `zensical.toml` overrode Zensical's default
+  `custom_fences` list (which ships the `mermaid` fence), so every diagram was
+  emitted as a plain code block.
+- **The generated dependency list on the credits page renders.** The generator only
+  printed under `if __name__ == "__main__"`, but `markdown-exec` runs it with a
+  synthetic `__name__` and emits nothing when no output is produced.
+- **Dropped a fabricated `.pyc-source cache`** from the architecture page; the
+  package has a single content-hash cache.
+
+## [2026.09.6] - 2026-09-30
+
+### Added
+
 - **Documentation overhaul**: New `Architecture` page with two Mermaid
   pipeline diagrams (per-stage data flow and per-file work decomposition);
   new `Comparison with other tools` page positioning `pyreorder` against
