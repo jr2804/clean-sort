@@ -6,6 +6,7 @@ site. Kept small and targeted rather than mirroring ``src/pyreorder``.
 
 from __future__ import annotations
 
+import re
 import runpy
 from pathlib import Path
 
@@ -36,3 +37,18 @@ def test_gen_credits_prints_when_not_run_as_main(capsys: pytest.CaptureFixture[s
     assert out.strip(), "gen_credits.py printed nothing; the credits page would render empty"
     assert "https://pypi.org/project/" in out
     assert not out.startswith("# "), "the generated text must not add its own top-level heading"
+    assert "libcst" in out, "runtime dependencies must be listed, not just the docs toolchain"
+
+
+def test_readme_local_images_exist_and_are_labelled() -> None:
+    """GitHub renders the README as written, so a bad path or unlabelled SVG degrades it silently."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    srcs = re.findall(r'<img[^>]+src="([^"]+)"', readme)
+    srcs += re.findall(r"!\[[^\]]*\]\(([^)]+)\)", readme)
+    local = [s for s in srcs if not s.startswith(("http://", "https://"))]
+    assert local, "expected at least one local README image (the banner)"
+    for src in local:
+        path = ROOT / src
+        assert path.exists(), f"README references a missing image: {src}"
+        if path.suffix == ".svg":
+            assert "<title>" in path.read_text(encoding="utf-8"), f"{src} has no <title>"

@@ -1,5 +1,7 @@
 # pyreorder
 
+![pyreorder — the same statements in canonical order: a module's imports, constants, classes and functions, shown before and after sorting](docs/assets/banner.svg)
+
 [![status: beta](https://img.shields.io/badge/status-beta-yellow)](https://github.com/jr2804/pyreorder)
 [![docs](https://img.shields.io/badge/docs-jr2804.github.io-blue)](https://jr2804.github.io/pyreorder/)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="1200" height="420" role="img" aria-label="pyreorder — reorders a Python module's top-level statements into a canonical section layout, shown as a before-and-after code comparison">
+  <title>pyreorder — reorders a Python module's top-level statements into a canonical section layout</title>
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#04211f"/>
