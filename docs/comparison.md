@@ -2,12 +2,12 @@
 title: Comparison with other tools
 ---
 
-# Comparison with other tools
+## Comparison with other tools
 
 `pyreorder` is one of several Python source-organisation tools. This page positions
 it against the alternatives so you can pick the right tool for your codebase.
 
-## At a glance
+### At a glance
 
 | Tool | Scope | Strategy | Format-preserving | Touches class bodies | Touches imports |
 |---|---|---|---|---|---|
@@ -26,9 +26,9 @@ it against the alternatives so you can pick the right tool for your codebase.
 [sdsort]: https://dev.to/romdevin/improving-python-code-comprehension-top-down-documentation-for-bottom-up-implementations-2dbc
 [absort]: https://github.com/MapleCCC/ABSort
 
-## How they differ
+### How they differ
 
-### Imports: `isort` and Ruff
+#### Imports: `isort` and Ruff
 
 `isort` and Ruff's `I001` rule do one thing and do it well: sort `import`
 statements. They group by source (stdlib / third-party / local), alphabetise
@@ -41,7 +41,7 @@ two tools that both touch the same lines leads to merge conflicts and
 unpredictable diffs. Use both: `pyreorder` for everything except imports,
 `isort` / Ruff for the imports themselves.
 
-### Class bodies: `undersort`
+#### Class bodies: `undersort`
 
 `undersort` orders methods inside a class: dunders first, then `__init__`,
 then public methods, then private methods. It does not touch anything
@@ -53,7 +53,7 @@ outside the class body.
 honoured as a fallback when `[tool.pyreorder.class_methods]` is absent — see
 [Configuration](configuration.md).
 
-### Whole module: `ssort`, `sdsort`, `ABSort`
+#### Whole module: `ssort`, `sdsort`, `ABSort`
 
 These three tools each take a different stance on statement ordering:
 
@@ -82,7 +82,7 @@ These three tools each take a different stance on statement ordering:
 | **Imports** | No — delegated to `isort` / Ruff | No — same |
 | **Safety stance** | "leave unfamiliar code alone" | "reorder everything it can see" |
 
-## When to pick `pyreorder`
+### When to pick `pyreorder`
 
 `pyreorder` is the right tool when **at least two of these are true**:
 
@@ -97,7 +97,7 @@ These three tools each take a different stance on statement ordering:
 - You care that reformatting the file with `pyreorder` does not introduce
   whitespace, quote-style, or comment-position changes.
 
-## When to pick something else
+### When to pick something else
 
 - **Just imports?** Use `isort` or Ruff's `I001`. `pyreorder` will not touch
   them.
@@ -111,7 +111,7 @@ These three tools each take a different stance on statement ordering:
   abstraction level with syntax-tree similarity tie-breaking — minimal diff
   within an abstraction tier.
 
-## Using them together
+### Using them together
 
 A typical Python project can run all of these in sequence without
 conflict:

@@ -2,13 +2,13 @@
 title: "ADR 0001: libcst for AST manipulation"
 ---
 
-# ADR 0001: libcst for AST manipulation
+## ADR 0001: libcst for AST manipulation
 
 - **Status:** Accepted
 - **Date:** 2026-09-29
 - **Deciders:** Jan Reimes
 
-## Context and problem statement
+### Context and problem statement
 
 `pyreorder` reads Python source, reorders top-level statements and class members,
 and writes the file back. The tool needs an AST representation that:
@@ -22,7 +22,7 @@ The candidate libraries are `ast`, `libcst`, `redbaron`, and `astroid`. Each
 differs on the format-preservation axis, which is the load-bearing constraint
 for a *reorder-only* tool.
 
-## Considered options
+### Considered options
 
 1. **`libcst`** — Concrete Syntax Tree with full formatting preservation.
 2. **`ast`** — Built-in Abstract Syntax Tree. Preserves no formatting.
@@ -30,7 +30,7 @@ for a *reorder-only* tool.
    is no longer actively maintained.
 4. **`astroid`** — Adds type-inference metadata; does not preserve formatting.
 
-## Decision outcome
+### Decision outcome
 
 Chosen option: **libcst**. Reasons:
 
@@ -50,7 +50,7 @@ and it holds the entire file in memory. For `pyreorder` this is acceptable
 because (a) files are bounded by Python's import-graph in practice and
 (b) the `cache.py` layer short-circuits unchanged files.
 
-## Consequences
+### Consequences
 
 Positive:
 
@@ -70,7 +70,7 @@ Neutral:
   format-preserving parser would let us migrate, but no such parser exists
   yet in the standard library.
 
-## References
+### References
 
 - `src/pyreorder/pipeline.py` — the parse + render entry points.
 - `tests/test_pipeline.py` — round-trip tests that assert byte-identical

@@ -19,7 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   forward-reference barrier rule (0002), and the `stepdown` default
   strategy (0003).
 
-
 - **Project rename**: clean-sort → pyreorder. New PyPI package name is
   `pyreorder` (the `clean-sort` name is unreservable due to PyPI's
   ultranormalization filter colliding with the existing `cleansort`
@@ -68,6 +67,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (pre-commit/CI friendly); `--no-fail` (or `[cli] fail_on_changed = false`) exits 0, useful
   when running pyreorder from a formatter task that always writes. `pyreorder check` is unaffected.
 
+- **``from __future__ import annotations`` awareness**: When the module has
+  ``from __future__ import annotations``, annotation-only names in
+  ``AnnAssign`` are excluded from the forward-reference check, since
+  annotations are not evaluated at runtime.
+
+- Initial project structure from [copier-uv-plus](https://github.com/jr2804/copier-uv-plus).
+
 ### Fixed
 
 - **Forward-reference barrier for module-level constants** (issue #1): A
@@ -75,12 +81,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (e.g. ``_DEFAULT_COLOR = Color.RED`` where ``Color`` is an enum) is now
   treated as a barrier — it stays in place rather than being hoisted to
   ``module_constants``. This prevents ``NameError`` at import time.
-
-### Added
-
-- **``from __future__ import annotations`` awareness**: When the module has
-  ``from __future__ import annotations``, annotation-only names in
-  ``AnnAssign`` are excluded from the forward-reference check, since
-  annotations are not evaluated at runtime.
-
-- Initial project structure from [copier-uv-plus](https://github.com/jr2804/copier-uv-plus).

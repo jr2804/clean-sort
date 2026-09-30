@@ -2,13 +2,13 @@
 title: "ADR 0002: Forward-reference barriers"
 ---
 
-# ADR 0002: Forward-reference barriers
+## ADR 0002: Forward-reference barriers
 
 - **Status:** Accepted
 - **Date:** 2026-09-29
 - **Deciders:** Jan Reimes
 
-## Context and problem statement
+### Context and problem statement
 
 A naive section-based reorder can break a module. Consider:
 
@@ -63,7 +63,7 @@ If we hoist `_DEFAULT_COLOR` into the `module_constants` section ahead of
 
 `pyreorder` needs a rule that says *when not to move a statement*.
 
-## Considered options
+### Considered options
 
 1. **No barriers** — always reorder. Breaks forward references. Rejected.
 2. **Acyclic-dependency topological sort (like `ssort`)** — sound, but
@@ -73,7 +73,7 @@ If we hoist `_DEFAULT_COLOR` into the `module_constants` section ahead of
    place if its right-hand side names a value defined in a later section.
    Conservative: only moves code we can prove is safe to move.
 
-## Decision outcome
+### Decision outcome
 
 Chosen option: **3 — forward-reference detection per statement**.
 
@@ -91,7 +91,7 @@ top-level statements (third-party decorators, runtime-generated class
 attributes) that never move; the benefit is that `pyreorder` is safe to run on
 a codebase it has never seen.
 
-## Edge case: `from __future__ import annotations`
+### Edge case: `from __future__ import annotations`
 
 When `from __future__ import annotations` is active, annotations are
 strings and are not evaluated at runtime. Names that appear *only* in
@@ -102,7 +102,7 @@ when the future import is present. See
 `_has_forward_ref` in `classify.py` and the test in
 `tests/test_classify.py::test_forward_ref_barrier_with_future_annotations`.
 
-## Consequences
+### Consequences
 
 Positive:
 
@@ -122,7 +122,7 @@ Neutral:
 - The barrier rule interacts with `runtime_setup`: see ADR 0003 for the
   carve-out that puts `app = typer.Typer()` ahead of functions.
 
-## References
+### References
 
 - `src/pyreorder/classify.py::classify`, `_has_forward_ref`,
   `_is_runtime_setup_assignment`.

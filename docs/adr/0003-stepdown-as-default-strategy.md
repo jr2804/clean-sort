@@ -2,13 +2,13 @@
 title: "ADR 0003: stepdown as the default strategy"
 ---
 
-# ADR 0003: stepdown as the default strategy
+## ADR 0003: stepdown as the default strategy
 
 - **Status:** Accepted
 - **Date:** 2026-09-29
 - **Deciders:** Jan Reimes
 
-## Context and problem statement
+### Context and problem statement
 
 Within a configured section, statements have to be put in *some* order.
 `pyreorder` offers four strategies:
@@ -23,7 +23,7 @@ The choice between `stepdown` and `abstraction` affects how readable the
 file is. The other two are mostly lexical (`keep`) or alphabetical
 (`alpha`) and don't depend on the dependency graph.
 
-## Considered options
+### Considered options
 
 1. **`alpha` by default** — predictable, no surprises, no dependency
    analysis. The cost: alphabetical order in a `functions` section
@@ -38,7 +38,7 @@ file is. The other two are mostly lexical (`keep`) or alphabetical
    a reader following a function's definition has to scroll down past
    every function that calls it.
 
-## Decision outcome
+### Decision outcome
 
 Chosen option: **`stepdown`** is the default for `functions` and `classes`
 sections. Rationale:
@@ -57,7 +57,7 @@ sections. Rationale:
 fallback when dependency analysis cannot make progress — e.g. when the
 section contains statements with no resolvable names.
 
-## Interactions with the forward-reference barrier
+### Interactions with the forward-reference barrier
 
 A statement whose right-hand side references a name defined in a later
 section is treated as a barrier (ADR 0002) and is not part of the
@@ -71,7 +71,7 @@ section, the barrier rule keeps `_DEFAULT_COLOR` in place until `Color`
 is defined. `stepdown` then orders the rest of the constants around
 those two, but the barrier-pair stays put.
 
-## Consequences
+### Consequences
 
 Positive:
 
@@ -92,7 +92,7 @@ Neutral:
 - The choice between `stepdown` and `abstraction` is a matter of style.
   The default reflects a position; it does not constrain it.
 
-## References
+### References
 
 - `src/pyreorder/sorters.py::dependency` — the topological sort
   implementation.

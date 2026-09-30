@@ -5,13 +5,13 @@ hide:
 - toc
 ---
 
-# Code review — 2026-09-29
+## Code review — 2026-09-29
 
 Automated review of the current `pyreorder` working tree at commit
 `72c33b3` (the docs-additions commit on `main`). This report captures
 the state of the code at that commit, not a proposed change set.
 
-## Tool availability
+### Tool availability
 
 | Tool | Status | Notes |
 |---|---|---|
@@ -20,7 +20,7 @@ the state of the code at that commit, not a proposed change set.
 | `pytest` | (run `mise run test` to populate) | Test runner |
 | `codespell` | (run `mise run spell` to populate) | Spell checker |
 
-## Findings (placeholder)
+### Findings (placeholder)
 
 Run the following locally to populate:
 
@@ -32,7 +32,7 @@ mise run test   # pytest --cov
 
 The results will be appended below.
 
-## Static observations (read of the code, no execution)
+### Static observations (read of the code, no execution)
 
 - `src/pyreorder/pipeline.py` orchestrates the parse → classify → reorder →
   in-section-sort → render pipeline. Single entry point `sort_source`.
@@ -52,7 +52,7 @@ The results will be appended below.
 - `src/pyreorder/undersort.py` (`MethodSorter`) provides in-class method
   ordering; the legacy `[tool.undersort]` table is honoured as a fallback.
 
-## File inventory
+### File inventory
 
 | Path | Lines | Notes |
 |---|---|---|
@@ -67,7 +67,7 @@ The results will be appended below.
 | `src/pyreorder/__main__.py` | 8 | |
 | `src/pyreorder/cli/app.py` | 792 | |
 
-## Test inventory
+### Test inventory
 
 | Path | Lines | Notes |
 |---|---|---|
@@ -80,9 +80,9 @@ The results will be appended below.
 | `tests/test_transforms.py` | 515 | |
 | `tests/test_undersort.py` | 336 | |
 
-## Public surface per module
+### Public surface per module
 
-### pipeline.py
+#### pipeline.py
 
 ```python
 class SectionSorter(cst.CSTTransformer):
@@ -91,7 +91,7 @@ def sort_source(source: str, cfg: Config, *, filename: str = "<unknown>") -> str
 def would_change(source: str, cfg: Config, *, filename: str = "<unknown>") -> bool:
 ```
 
-### classify.py
+#### classify.py
 
 ```python
 class ClassifyContext:
@@ -106,14 +106,14 @@ def has_future_annotations(module: cst.Module) -> bool:
 def module_top_level_names(body: Sequence[cst.CSTNode]) -> dict[str, int]:
 ```
 
-### sorters.py
+#### sorters.py
 
 ```python
 def alpha(nodes: list[cst.CSTNode]) -> list[cst.CSTNode]:
 def dependency(nodes: list[cst.CSTNode], direction: str) -> list[cst.CSTNode]:
 ```
 
-## Coverage gate
+### Coverage gate
 
 Configured:
 
@@ -124,7 +124,7 @@ addopts = "--cov=pyreorder --cov-report=term-missing --cov-report=html --cov-rep
 fail_under = 90
 ```
 
-## What to run when mise is available
+### What to run when mise is available
 
 ```bash
 mise install

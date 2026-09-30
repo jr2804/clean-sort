@@ -5,7 +5,7 @@ hide:
 - toc
 ---
 
-# Architecture Decision Records
+## Architecture Decision Records
 
 This directory records significant design decisions in `pyreorder`. Each ADR
 captures the **context**, the **options considered**, the **decision**, and
@@ -15,7 +15,7 @@ ADRs are immutable once accepted. If a decision is reversed, a new ADR is
 written that supersedes the old one (with a link). The history of the
 project's design is preserved in the ADR sequence.
 
-## Index
+### Index
 
 | # | Title | Status |
 |---|---|---|
@@ -23,7 +23,7 @@ project's design is preserved in the ADR sequence.
 | [0002](0002-forward-reference-barriers.md) | Forward-reference barriers | Accepted |
 | [0003](0003-stepdown-as-default-strategy.md) | stepdown as the default strategy | Accepted |
 
-## Conventions
+### Conventions
 
 - Files are named `NNNN-short-kebab-title.md`. The number is a monotonically
   increasing counter; never re-use a number.
@@ -34,7 +34,7 @@ project's design is preserved in the ADR sequence.
   flag syntax) go in ADRs even though they look like docs — they are
   decisions, and we want them on record.
 
-## Adding a new ADR
+### Adding a new ADR
 
 1. Copy the template below to a new file with the next available number.
 2. Fill in **Status**, **Date**, and **Deciders** at the top.
