@@ -43,6 +43,8 @@ def fs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
+    # Windows: pathlib.Path.home() reads USERPROFILE, not HOME.
+    monkeypatch.setenv("USERPROFILE", str(home))
     return tmp_path
 
 
