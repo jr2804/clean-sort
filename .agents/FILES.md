@@ -23,4 +23,5 @@ Kept compact — agents hallucinate less when they know where definitions live.
 | CLI (Typer app) | `src/pyreorder/cli/app.py` | `run`, `check`, `diff`, `config` |
 | Project config | `pyproject.toml` | `[tool.pyreorder]`, `[tool.pyreorder.module]`, `[tool.pyreorder.strategy]`, `[tool.pyreorder.class_methods]` |
 | Tooling tasks | `.config/mise/` | `format`, `format-md`, `lint`, `typecheck`, `spell` |
+| Type-checker config | `ty.toml` | `include` = `src`/`tests`; excludes the `tests/data` fixtures |
 | Agent skill | `skills/pyreorder/SKILL.md` | references `config.md`, `sort_programmatically.py` |
