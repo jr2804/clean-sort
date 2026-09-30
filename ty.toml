@@ -8,6 +8,9 @@ include = [
     "src",
     "tests",
 ]
+# tests/data/* are pyreorder fixtures — deliberately-unsorted inputs plus the
+# sorter's canonical outputs — not maintained, type-clean code.
+exclude = ["tests/data"]
 
 [terminal]
 error-on-warning = true

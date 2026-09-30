@@ -208,13 +208,16 @@ def _extract_main_imports(node: cst.If) -> tuple[cst.If | None, list[cst.SimpleS
     Returns ``(cleaned_if_or_None, imports)``.  If the guard body becomes
     empty after extraction, ``None`` is returned to signal removal.
     """
-    body_stmts: list[cst.BaseStatement] = list(node.body.body)  # type: ignore[union-attr]
+    # Only an indented suite can hold the statement lines we hoist.
+    if not isinstance(node.body, cst.IndentedBlock):
+        return node, []
+    body_stmts: list[cst.BaseStatement] = list(node.body.body)
     imports: list[cst.SimpleStatementLine] = []
     kept: list[cst.BaseStatement] = []
     for stmt in body_stmts:
         if isinstance(stmt, cst.SimpleStatementLine) and all(_is_simple_import(s) for s in stmt.body) and stmt.body:
             for s in stmt.body:
-                imports.append(_flat_import_line(cast(cst.BaseSmallStatement, s)))
+                imports.append(_flat_import_line(s))
             continue
         kept.append(stmt)
     if not imports:

@@ -14,7 +14,7 @@ Fixtures are regenerated as described in ``tests/data/README.md``.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import libcst as cst
@@ -99,7 +99,7 @@ def test_main_block_is_last(unsorted: str, expected: str, cfg: Config) -> None:
 
 
 # -------------------------------------------------------------------- helpers
-def _first_index(body: list[cst.CSTNode], pred: Callable[[cst.CSTNode], bool]) -> int | None:
+def _first_index(body: Sequence[cst.CSTNode], pred: Callable[[cst.CSTNode], bool]) -> int | None:
     for index, node in enumerate(body):
         if pred(node):
             return index
