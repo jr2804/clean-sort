@@ -19,9 +19,17 @@ other sorting tools (isort, undersort, etc.) or provide ruff subcommands.
 
 ## Install
 
+Requires Python 3.11+; Linux, macOS, and Windows are all supported.
+
 ```shell
 uv tool install pyreorder
 pyreorder --version        # `rord` is installed as a short alias
+```
+
+Or with pip:
+
+```shell
+pip install pyreorder
 ```
 
 ## Quick start
@@ -160,6 +168,17 @@ tools, ADRs, and the API reference.
 Contributor setup, the check/test tasks, the docs build, pre-commit hooks, and
 the release process are on the
 [Development](https://jr2804.github.io/pyreorder/development/) page.
+
+## Contributing
+
+Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers setup, the
+check and test tasks, and the release process; the same material is on the docs
+site under [Development](https://jr2804.github.io/pyreorder/development/).
+
+## Support
+
+Bug reports and feature requests go to the
+[issue tracker](https://github.com/jr2804/pyreorder/issues).
 
 ## Acknowledgements
 
