@@ -2,6 +2,6 @@
   "database": "dolt",
   "backend": "dolt",
   "dolt_mode": "embedded",
-  "dolt_database": "csort",
+  "dolt_database": "pyreorder",
   "project_id": "15b06e70-03a2-45b5-873d-f5e99259e110"
 }
