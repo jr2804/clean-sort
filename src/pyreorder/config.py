@@ -5,7 +5,7 @@ Config is read from (first match wins, walking up from the target file):
 * ``--config PATH`` (explicit)
 * ``pyreorder.toml`` in the current or any parent directory
 * ``.config/pyreorder.toml`` in the current or any parent directory
-* ``[tool.preorder]`` in ``pyproject.toml``
+* ``[tool.pyreorder]`` in ``pyproject.toml``
 
 .. note::
 
@@ -80,7 +80,7 @@ class Config:
             the top of the module (pre-pass before section sorting).
         remove_type_checking: Delete ``if TYPE_CHECKING:`` guards and hoist the
             imports they contained to the top of the module (pre-pass).
-        fail_on_changed: When ``True`` (default), ``preorder run`` exits with code 1
+        fail_on_changed: When ``True`` (default), ``pyreorder run`` exits with code 1
             when any file was modified. Pre-commit/CI friendly. Set to ``False``
             via ``[cli] fail_on_changed = false`` or ``--no-fail``.
         exclude: Glob patterns to exclude during file discovery (merged with
@@ -131,10 +131,10 @@ class Config:
         return self.strategies.get(section, "keep")
 
     def config_signature(self) -> str:
-        """Stable hash of the output-affecting fields + preorder version.
+        """Stable hash of the output-affecting fields + pyreorder version.
 
         Used as part of the content-hash cache key. Changes to any field that
-        affects sorted output, or to the preorder version, invalidate the cache.
+        affects sorted output, or to the pyreorder version, invalidate the cache.
         Non-output fields (``fail_on_changed``, ``exclude``, ``recursive``,
         ``unknown_section``, ``cache_*``, ``config_path``) are excluded.
         """
@@ -168,7 +168,7 @@ class Config:
         raw: dict[str, Any] | None = None,
         is_pyproject: bool = False,
     ) -> Config:
-        """Build a :class:`Config` from a parsed ``preorder`` table."""
+        """Build a :class:`Config` from a parsed ``pyreorder`` table."""
         cfg = cls(config_path=path)
 
         module = data.get("module", {}) or {}
@@ -186,7 +186,7 @@ class Config:
                     cfg.strategies[name] = value
                 else:
                     warnings.warn(
-                        f"preorder: unknown strategy {value!r} for section {name!r}; ignoring",
+                        f"pyreorder: unknown strategy {value!r} for section {name!r}; ignoring",
                         stacklevel=2,
                     )
 
@@ -208,7 +208,7 @@ class Config:
                     cfg.dunder_exports_names = list(names)
                 else:
                     warnings.warn(
-                        "preorder: classification.dunder_exports_names must be a list of strings; ignoring",
+                        "pyreorder: classification.dunder_exports_names must be a list of strings; ignoring",
                         stacklevel=2,
                     )
 
@@ -233,7 +233,7 @@ class Config:
                     cfg.cache_dir = Path(cache_dir)
                 else:
                     warnings.warn(
-                        "preorder: cli.cache_dir must be a string; ignoring",
+                        "pyreorder: cli.cache_dir must be a string; ignoring",
                         stacklevel=2,
                     )
             if "jobs" in cli:
@@ -242,7 +242,7 @@ class Config:
                     cfg.jobs = jobs
                 else:
                     warnings.warn(
-                        "preorder: cli.jobs must be an integer; ignoring",
+                        "pyreorder: cli.jobs must be an integer; ignoring",
                         stacklevel=2,
                     )
             if "parallel_backend" in cli:
@@ -251,7 +251,7 @@ class Config:
                     cfg.parallel_backend = backend
                 else:
                     warnings.warn(
-                        "preorder: cli.parallel_backend must be 'process' or 'thread'; ignoring",
+                        "pyreorder: cli.parallel_backend must be 'process' or 'thread'; ignoring",
                         stacklevel=2,
                     )
 
@@ -261,7 +261,7 @@ class Config:
                 cfg.cache_ttl_days = ttl
             else:
                 warnings.warn(
-                    "preorder: cli.cache_ttl_days must be a non-negative int; ignoring",
+                    "pyreorder: cli.cache_ttl_days must be a non-negative int; ignoring",
                     stacklevel=2,
                 )
 
@@ -273,7 +273,7 @@ class Config:
                     cfg.exclude = [str(p) for p in exclude]
                 else:
                     warnings.warn(
-                        "preorder: discovery.exclude must be a list of strings; ignoring",
+                        "pyreorder: discovery.exclude must be a list of strings; ignoring",
                         stacklevel=2,
                     )
             if "recursive" in discovery:
@@ -287,13 +287,13 @@ class Config:
         if isinstance(value, list) and value and all(v in valid for v in value):
             setattr(self, attr, list(value))
         elif value is not None:
-            warnings.warn(f"preorder: invalid {attr}={value!r}; using default", stacklevel=2)
+            warnings.warn(f"pyreorder: invalid {attr}={value!r}; using default", stacklevel=2)
             # keep default
 
     def _apply_class_methods(self, cm: dict[str, Any]) -> None:
-        """Apply a ``class_methods`` table (either preorder or legacy undersort).
+        """Apply a ``class_methods`` table (either pyreorder or legacy undersort).
 
-        ``enabled`` is preorder-only; the legacy schema predates that key, so it
+        ``enabled`` is pyreorder-only; the legacy schema predates that key, so it
         defaults to the current value when absent.
         """
         if "enabled" in cm:
@@ -324,7 +324,7 @@ def _legacy_undersort_overrides(data: dict[str, Any], *, is_pyproject: bool) -> 
     * ``[undersort]`` (or ``[tool.undersort]``) inside a standalone config.
 
     Only ``order`` and ``method_type_order`` are part of the legacy schema; an
-    empty result falls through to the preorder defaults.
+    empty result falls through to the pyreorder defaults.
     """
     candidates: list[dict[str, Any]] = []
     if is_pyproject:
@@ -343,14 +343,14 @@ def _read_toml(path: Path) -> dict[str, Any]:
         return tomllib.load(fh)
 
 
-def _preorder_table_from_data(data: dict[str, Any], *, is_pyproject: bool) -> dict[str, Any]:
-    """Extract the preorder config table from parsed TOML data."""
+def _pyreorder_table_from_data(data: dict[str, Any], *, is_pyproject: bool) -> dict[str, Any]:
+    """Extract the pyreorder config table from parsed TOML data."""
     if is_pyproject:
-        return data.get("tool", {}).get("preorder", {}) or {}
-    # standalone pyreorder.toml: top-level is the preorder config, but tolerate a
-    # [tool.preorder] table too.
-    if "preorder" in data.get("tool", {}):
-        return data["tool"]["preorder"] or {}
+        return data.get("tool", {}).get("pyreorder", {}) or {}
+    # standalone pyreorder.toml: top-level is the pyreorder config, but tolerate a
+    # [tool.pyreorder] table too.
+    if "pyreorder" in data.get("tool", {}):
+        return data["tool"]["pyreorder"] or {}
     return data
 
 
@@ -369,7 +369,7 @@ def discover(start: Path | None = None) -> Path | None:
             except (tomllib.TOMLDecodeError, OSError):
                 continue
             tool = data.get("tool", {})
-            if tool.get("preorder"):
+            if tool.get("pyreorder"):
                 return pyproject
     return None
 
@@ -397,11 +397,11 @@ def load(
     try:
         data = _read_toml(path)
     except tomllib.TOMLDecodeError as exc:
-        warnings.warn(f"preorder: could not parse {path}: {exc}; using defaults", stacklevel=2)
+        warnings.warn(f"pyreorder: could not parse {path}: {exc}; using defaults", stacklevel=2)
         return Config(config_path=path)
 
     is_pyproject = path.name == "pyproject.toml"
-    table = _preorder_table_from_data(data, is_pyproject=is_pyproject)
+    table = _pyreorder_table_from_data(data, is_pyproject=is_pyproject)
     cfg = Config.from_table(table, path=path, raw=data, is_pyproject=is_pyproject)
 
     return cfg
@@ -493,7 +493,7 @@ CONFIG_SCHEMA: list[ConfigKey] = [
         "cli",
         "fail_on_changed",
         True,
-        "Exit non-zero when preorder run modifies files (pre-commit/CI friendly).",
+        "Exit non-zero when pyreorder run modifies files (pre-commit/CI friendly).",
     ),
     ConfigKey(
         "cli",
@@ -549,7 +549,7 @@ CONFIG_SCHEMA: list[ConfigKey] = [
 # ---------------------------------------------------------------------- schema
 # The config schema is the single source of truth for the set of recognized
 # config keys, their defaults, and their documentation. It drives the
-# `generate_config()` template builder (used by `preorder config generate`) and
+# `generate_config()` template builder (used by `pyreorder config generate`) and
 # the validation/drop logic for `--with-config` merges.
 
 
@@ -571,7 +571,7 @@ def generate_config(
     overrides: dict[str, dict[str, Any]] | None = None,
     with_comments: bool = False,
 ) -> str:
-    """Render a preorder TOML config string from :data:`CONFIG_SCHEMA`.
+    """Render a pyreorder TOML config string from :data:`CONFIG_SCHEMA`.
 
     Args:
         overrides: Section-keyed dict of overrides (e.g. from ``--with-config``).
@@ -579,7 +579,7 @@ def generate_config(
         with_comments: When True, emit the explanatory comment line above each key.
     """
     overrides = overrides or {}
-    lines: list[str] = ["# pyreorder configuration. See https://codeberg.org/jr2804/pyreorder", ""]
+    lines: list[str] = ["# pyreorder configuration. See https://github.com/jr2804/pyreorder", ""]
     current_section: str | None = None
     for key in CONFIG_SCHEMA:
         if key.section != current_section:
@@ -602,7 +602,7 @@ def generate_config(
 
 
 def validate_config_keys(data: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], list[str]]:
-    """Split a parsed preorder TOML table into (recognized, invalid_paths).
+    """Split a parsed pyreorder TOML table into (recognized, invalid_paths).
 
     Used by ``--with-config`` to drop unknown/deprecated keys with warnings.
     Returns a dict of section-keyed recognized overrides and a list of

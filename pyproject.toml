@@ -41,7 +41,8 @@ dev = [
 ]
 
 [project.scripts]
-preorder = "pyreorder.cli.app:main"
+pyreorder = "pyreorder.cli.app:main"
+rord = "pyreorder.cli.app:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pyreorder"]
@@ -72,11 +73,11 @@ check-hidden = true
 ignore-words-list = "crate,ser,fpr,nd,fo,ba,te"
 ignore-regex = "https?://|\b[A-Z]+\b"
 
-[tool.preorder]
-# pyreorder configuration. See https://codeberg.org/jr2804/pyreorder for the full schema.
-# Disabling: add a `# preorder: off` comment anywhere in a file's header to skip it.
+[tool.pyreorder]
+# pyreorder configuration. See https://github.com/jr2804/pyreorder for the full schema.
+# Disabling: add a `# pyreorder: off` comment anywhere in a file's header to skip it.
 
-[tool.preorder.module]
+[tool.pyreorder.module]
 # Ordered list of section buckets. Each top-level statement is classified into one.
 # Recognized sections: imports, typing_imports, module_constants, runtime_setup, enums,
 # dataclasses, classes, functions, dunder_exports, main_block. Anything unrecognized lands in "other" (kept last).
@@ -99,20 +100,20 @@ sections = [
 #
 # WARNING: "alpha" is safe for imports/enums, but reordering interdependent
 # constants or classes can break runtime order (NameError/MRO). Only enable it
-# per-section once you have checked the result with `preorder diff`.
-[tool.preorder.strategy]
+# per-section once you have checked the result with `pyreorder diff`.
+[tool.pyreorder.strategy]
 enums = "alpha"
 # functions = "stepdown"   # caller before callee (top-down narrative)
 # classes = "keep"
 
-[tool.preorder.class_methods]
+[tool.pyreorder.class_methods]
 # Reorder methods *within* each class (undersort semantics).
 enabled = true
 order = ["public", "protected", "private"]
 method_type_order = ["instance", "class", "static"]
 
-# Back-compat: preorder also reads [tool.undersort] for class_methods order/method_type_order
-# when [tool.preorder.class_methods] is absent.
+# Back-compat: pyreorder also reads [tool.undersort] for class_methods order/method_type_order
+# when [tool.pyreorder.class_methods] is absent.
 [tool.undersort]
 order = ["public", "protected", "private"]
 method_type_order = ["instance", "class", "static"]

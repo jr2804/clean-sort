@@ -1,6 +1,6 @@
-- id: preorder
-  name: preorder
+- id: pyreorder
+  name: pyreorder
   description: AST-based structural sorter for Python source code.
-  entry: preorder run --
+  entry: pyreorder run --
   language: python
   files: \.py$

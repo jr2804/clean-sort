@@ -1,10 +1,10 @@
-"""``preorder`` command-line interface.
+"""``pyreorder`` command-line interface.
 
 Commands
 --------
 run     sort files in place (or stdin -> stdout with ``-``)
 check   exit non-zero if any file would change (for CI / pre-commit)
-diff    print unified diffs of the changes preorder would make
+diff    print unified diffs of the changes pyreorder would make
 config  show resolved config or write a ``pyreorder.toml`` template
 """
 
@@ -24,15 +24,15 @@ from pyreorder import VALID_STRATEGIES, Config, __version__, load_config, sort_s
 from pyreorder.cache import Cache, hash_text
 from pyreorder.config import _VALID_MTYPES, _VALID_VIS, SectionStrategy, generate_config, validate_config_keys
 
-# `app`/`config_app` are runtime setup used by the decorators below; preorder treats
+# `app`/`config_app` are runtime setup used by the decorators below; pyreorder treats
 # such unrecognised top-level statements as barriers and will not move them.
 app = typer.Typer(
-    name="preorder",
+    name="pyreorder",
     help="AST-based structural sorter for Python source code.",
     no_args_is_help=True,
     add_completion=True,
 )
-config_app = typer.Typer(help="Manage preorder configuration.", no_args_is_help=True)
+config_app = typer.Typer(help="Manage pyreorder configuration.", no_args_is_help=True)
 app.add_typer(config_app, name="config")
 
 _EXCLUDE_DIRS = frozenset(
@@ -179,7 +179,7 @@ def _main(
 
 @app.command()
 def version() -> None:
-    """Show the preorder version."""
+    """Show the pyreorder version."""
     typer.echo(__version__)
 
 
@@ -189,7 +189,7 @@ def _parse_permutation(value: str, *, valid: frozenset[str], flag: str) -> list[
     items = [item.strip() for item in value.split(",") if item.strip()]
     if set(items) != set(valid):
         warnings.warn(
-            f"preorder: {flag}={value!r} must be a permutation of {sorted(valid)}; ignoring",
+            f"pyreorder: {flag}={value!r} must be a permutation of {sorted(valid)}; ignoring",
             stacklevel=2,
         )
         return []
@@ -226,7 +226,7 @@ def _build_config(
         for raw in strategy_overrides.split(","):
             item = raw.strip()
             if not item or "=" not in item:
-                warnings.warn(f"preorder: ignoring malformed strategy override {item!r}", stacklevel=2)
+                warnings.warn(f"pyreorder: ignoring malformed strategy override {item!r}", stacklevel=2)
                 continue
             name, value = item.split("=", 1)
             name, value = name.strip(), value.strip()
@@ -234,7 +234,7 @@ def _build_config(
                 cfg.strategies[name] = cast(SectionStrategy, value)
             else:
                 warnings.warn(
-                    f"preorder: unknown strategy {value!r} for section {name!r}; ignoring",
+                    f"pyreorder: unknown strategy {value!r} for section {name!r}; ignoring",
                     stacklevel=2,
                 )
     if class_methods_order:
@@ -291,7 +291,7 @@ def _process_stdin(cfg: Config, mode: str) -> int:
     try:
         result = sort_source(source, cfg, filename="<stdin>")
     except Exception as exc:  # noqa: BLE001 - surface as CLI error
-        typer.echo(f"preorder: error: {exc}", err=True)
+        typer.echo(f"pyreorder: error: {exc}", err=True)
         return 2
     if mode == "run":
         sys.stdout.write(result)
@@ -336,7 +336,7 @@ def _process_files(
         try:
             original = file.read_text(encoding="utf-8")
         except OSError as exc:
-            typer.echo(f"preorder: cannot read {file}: {exc}", err=True)
+            typer.echo(f"pyreorder: cannot read {file}: {exc}", err=True)
             errored = True
             continue
         # Cache lookup: skip the file if its current content matches the
@@ -349,7 +349,7 @@ def _process_files(
         try:
             result = sort_source(original, cfg, filename=str(file))
         except Exception as exc:  # noqa: BLE001
-            typer.echo(f"preorder: error in {file}: {exc}", err=True)
+            typer.echo(f"pyreorder: error in {file}: {exc}", err=True)
             errored = True
             continue
         if cache is not None and config_sig is not None and mode in ("run", "check"):
@@ -394,7 +394,7 @@ def _sort_one(args: tuple) -> tuple:  # noqa: ANN401
     try:
         original = path.read_text(encoding="utf-8")
     except OSError as exc:
-        return (path_str, False, f"preorder: cannot read {path}: {exc}", "", None)
+        return (path_str, False, f"pyreorder: cannot read {path}: {exc}", "", None)
     # Cache lookup (read-only — no save)
     cache_entries: dict[str, str] | None = None
     if cache_path_str and config_sig and mode in ("run", "check"):
@@ -406,7 +406,7 @@ def _sort_one(args: tuple) -> tuple:  # noqa: ANN401
     try:
         result = sort_source(original, cfg, filename=str(path))
     except Exception as exc:  # noqa: BLE001
-        return (path_str, False, f"preorder: error in {path}: {exc}", "", None)
+        return (path_str, False, f"pyreorder: error in {path}: {exc}", "", None)
     # Collect cache entries (returned to main process for centralised write)
     if cache_path_str and config_sig and mode in ("run", "check"):
         source_hash = hash_text(original)
@@ -547,7 +547,7 @@ def _run(
     effective_recursive = cfg.recursive and not no_recursive
     files = _collect(paths, recursive=effective_recursive, excludes=effective_excludes)
     if not files:
-        typer.echo("preorder: no Python files found")
+        typer.echo("pyreorder: no Python files found")
         raise typer.Exit(0)
     cache_dir = _resolve_cache_dir(cfg, use_cache=not no_cache)
     cache = Cache(cache_dir / "cache.json" if cache_dir is not None else None, ttl_days=cfg.cache_ttl_days)
@@ -684,7 +684,7 @@ def diff(
     jobs: JobsOpt = None,
     parallel_backend: ParallelBackendOpt = None,
 ) -> None:
-    """Print unified diffs of the changes preorder would make."""
+    """Print unified diffs of the changes pyreorder would make."""
     _run(
         paths,
         "diff",
@@ -741,23 +741,23 @@ def config_generate(
             with with_config.open("rb") as fh:
                 data = tomllib.load(fh)
         except (OSError, tomllib.TOMLDecodeError) as exc:
-            typer.echo(f"preorder: could not read {with_config}: {exc}", err=True)
+            typer.echo(f"pyreorder: could not read {with_config}: {exc}", err=True)
             raise typer.Exit(2) from exc
-        # If the input is a pyproject.toml, unwrap [tool.preorder]
+        # If the input is a pyproject.toml, unwrap [tool.pyreorder]
         if with_config.name == "pyproject.toml":
-            data = data.get("tool", {}).get("preorder", {}) or {}
+            data = data.get("tool", {}).get("pyreorder", {}) or {}
         overrides, invalid = validate_config_keys(data)
         for path in invalid:
-            typer.echo(f"preorder: warning: {path} is not a recognized config option; dropping", err=True)
+            typer.echo(f"pyreorder: warning: {path} is not a recognized config option; dropping", err=True)
     content = generate_config(overrides=overrides, with_comments=with_comments)
     if output is None:
         typer.echo(content, nl=False)
         return
     if output.suffix != ".toml":
-        typer.echo(f"preorder: --output must end in .toml (got {output.name})", err=True)
+        typer.echo(f"pyreorder: --output must end in .toml (got {output.name})", err=True)
         raise typer.Exit(2)
     if output.exists() and not force:
-        typer.echo(f"preorder: {output} already exists (use --force to overwrite)", err=True)
+        typer.echo(f"pyreorder: {output} already exists (use --force to overwrite)", err=True)
         raise typer.Exit(1)
     output.write_text(content, encoding="utf-8")
     typer.echo(f"wrote {output}")
@@ -788,5 +788,5 @@ def config_show(config: ConfigOpt = None) -> None:
 
 
 def main() -> None:
-    """Entry point for the ``preorder`` console script."""
+    """Entry point for the ``pyreorder`` console script."""
     app()

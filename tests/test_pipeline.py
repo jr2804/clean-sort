@@ -177,12 +177,12 @@ def test_method_type_ordering() -> None:
 
 # ----------------------------------------------------------------- directives
 def test_file_disable_directive() -> None:
-    src = "# preorder: off\ndef b():\n    pass\ndef a():\n    pass\n"
+    src = "# pyreorder: off\ndef b():\n    pass\ndef a():\n    pass\n"
     assert sort_source(src, Config(strategies={"functions": "alpha"})) == src
 
 
 def test_class_disable_trailing_comment() -> None:
-    src = "class C:  # preorder: off\n    def _prot(self):\n        pass\n    def pub(self):\n        pass\n"
+    src = "class C:  # pyreorder: off\n    def _prot(self):\n        pass\n    def pub(self):\n        pass\n"
     out = sort_source(src, KEEP)
     assert out.index("def _prot") < out.index("def pub")
 

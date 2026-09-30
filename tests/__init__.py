@@ -1,1 +1,1 @@
-"""Tests for Clean Sort."""
+"""Tests for pyreorder."""

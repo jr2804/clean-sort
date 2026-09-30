@@ -1,4 +1,4 @@
-# Pre-commit hooks configuration for Clean Sort
+# Pre-commit hooks configuration for pyreorder
 #
 # Install pre-commit hooks:
 #   pre-commit install
@@ -9,10 +9,10 @@
 repos:
   - repo: local
     hooks:
-      - id: preorder
-        name: preorder
+      - id: pyreorder
+        name: pyreorder
         description: AST-based structural sorter (this repo).
-        entry: uv run preorder run --
+        entry: uv run pyreorder run --
         language: system
         files: ^src/.*\.py$
         pass_filenames: true

@@ -10,7 +10,7 @@ These tests pin the public contract:
 * Custom ordering reshuffles method groups while keeping stability inside
   each group.
 * ``# nosort`` per-method marker locks a method at its original index;
-  ``# nosort`` / ``# preorder: off`` on the file header disables the file.
+  ``# nosort`` / ``# pyreorder: off`` on the file header disables the file.
 * Non-method class-body items keep their leading/trailing position; methods
   alone are reordered.
 * Decorators accessed via dotted form (``a.classmethod``) still count.
@@ -200,7 +200,7 @@ def test_per_method_csort_off_locks_position() -> None:
         class C:
             def pub(self):
                 pass
-            def __priv(self):  # preorder: off
+            def __priv(self):  # pyreorder: off
                 pass
             def prot(self):
                 pass
@@ -214,7 +214,7 @@ def test_per_method_csort_off_locks_position() -> None:
 def test_class_disable_directive_trailing() -> None:
     src = textwrap.dedent(
         """\
-        class C:  # preorder: off
+        class C:  # pyreorder: off
             def _z(self):
                 pass
             def a(self):
@@ -315,7 +315,7 @@ def test_file_disabled_helper_false_when_no_marker() -> None:
 
 
 def test_file_disabled_helper_true_for_csort_off() -> None:
-    module = cst.parse_module("# preorder: off\nimport os\n")
+    module = cst.parse_module("# pyreorder: off\nimport os\n")
     assert file_disabled(module) is True
 
 

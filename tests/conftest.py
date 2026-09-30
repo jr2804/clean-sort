@@ -1,4 +1,4 @@
-"""Pytest configuration and fixtures for Clean Sort."""
+"""Pytest configuration and fixtures for pyreorder."""
 
 from __future__ import annotations
 

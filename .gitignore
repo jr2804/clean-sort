@@ -51,7 +51,7 @@ CLAUDE.md
 # documentation
 site/
 # Cache directory (content-hash skip cache)
-.csort-cache/
+.pyreorder-cache/
 # Temp files from investigation / debugging
 cb_*.json
 ruff_*.txt

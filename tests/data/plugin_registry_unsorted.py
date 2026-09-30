@@ -1,4 +1,4 @@
-r"""Plugin registry — realistic module for preorder examples.
+r"""Plugin registry — realistic module for pyreorder examples.
 
 This file demonstrates the **abstraction** strategy (callee before caller).
 Unlike ``stepdown`` (top-down narrative), ``abstraction`` puts low-level
@@ -8,7 +8,7 @@ before the pipeline that wires them together.
 
 Run with::
 
-    preorder run  tests/data/plugin_registry_unsorted.py \\
+    pyreorder run  tests/data/plugin_registry_unsorted.py \\
         --strategy-overrides functions=abstraction,classes=abstraction
 
 The authoritative sorted output (``plugin_registry_sorted.py``) was generated

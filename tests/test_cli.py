@@ -1,4 +1,4 @@
-"""Tests for the preorder CLI."""
+"""Tests for the pyreorder CLI."""
 
 from __future__ import annotations
 
@@ -84,7 +84,7 @@ def test_config_generate_output(tmp_path: Path, monkeypatch) -> None:  # noqa: A
 
 def test_config_generate_output_enforces_toml(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    out_file = tmp_path / "preorder.txt"
+    out_file = tmp_path / "pyreorder.txt"
     res = runner.invoke(app, ["config", "generate", "--output", str(out_file)])
     assert res.exit_code == 2  # bad extension
     assert not out_file.exists()
@@ -158,7 +158,7 @@ def test_section_only_restricts_reordering(tmp_path: Path, monkeypatch) -> None:
     # Clean cwd; functions use alpha so the restricted section still reorders.
     monkeypatch.chdir(tmp_path)
     (tmp_path / "pyreorder.toml").write_text('[strategy]\nfunctions = "alpha"\n', encoding="utf-8")
-    # imports sit after the functions; without --section-only preorder hoists them
+    # imports sit after the functions; without --section-only pyreorder hoists them
     # to the top. With --section-only functions, imports become a barrier and stay.
     src = "def b():\n    pass\ndef a():\n    pass\nimport os\n"
     res = runner.invoke(app, ["run", "-", "--section-only", "functions"], input=src)
@@ -230,7 +230,7 @@ def test_remove_type_checking_flag(tmp_path: Path, monkeypatch) -> None:  # noqa
 
 def test_class_methods_order_override(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.chdir(tmp_path)
-    # base preorder config keeps the default ordering (public first); the CLI
+    # base pyreorder config keeps the default ordering (public first); the CLI
     # override flips visibility so private comes first.
     (tmp_path / "pyreorder.toml").write_text("[class_methods]\nenabled = true\n", encoding="utf-8")
     src = "class C:\n    def pub(self):\n        pass\n    def __priv(self):\n        pass\n"

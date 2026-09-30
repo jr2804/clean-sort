@@ -1,9 +1,9 @@
-"""A small HTTP client library — realistic module for preorder examples.
+"""A small HTTP client library — realistic module for pyreorder examples.
 
 This file is intentionally out of order. Run::
 
-    preorder diff tests/data/web_service_unsorted.py
-    preorder run  tests/data/web_service_unsorted.py
+    pyreorder diff tests/data/web_service_unsorted.py
+    pyreorder run  tests/data/web_service_unsorted.py
 
 to see section reordering, stepdown function sorting, and in-class method
 ordering (undersort) in action.

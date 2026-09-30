@@ -31,7 +31,7 @@ def test_invalid_strategy_warns() -> None:
 
 def test_load_pyproject(tmp_path: Path) -> None:
     (tmp_path / "pyproject.toml").write_text(
-        '[tool.preorder.module]\nsections = ["functions", "imports"]\n[tool.preorder.strategy]\nfunctions = "alpha"\n',
+        '[tool.pyreorder.module]\nsections = ["functions", "imports"]\n[tool.pyreorder.strategy]\nfunctions = "alpha"\n',
         encoding="utf-8",
     )
     cfg = load_config(start=tmp_path)
@@ -66,7 +66,7 @@ def test_discover_walks_up(tmp_path: Path) -> None:
 
 
 def test_explicit_overrides_discovery(tmp_path: Path) -> None:
-    (tmp_path / "pyproject.toml").write_text('[tool.preorder.module]\nsections = ["functions"]\n', encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text('[tool.pyreorder.module]\nsections = ["functions"]\n', encoding="utf-8")
     explicit = tmp_path / "pyreorder.toml"
     explicit.write_text('[module]\nsections = ["classes"]\n', encoding="utf-8")
     cfg = load_config(explicit=explicit)
@@ -97,7 +97,7 @@ def test_transforms_default_off() -> None:
 
 # ------------------------------------------------------------ legacy [tool.undersort]
 def test_legacy_tool_undersort_pyproject(tmp_path: Path) -> None:
-    # pyproject.toml spelling of the legacy config is honoured when the preorder
+    # pyproject.toml spelling of the legacy config is honoured when the pyreorder
     # class_methods table is absent.
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
@@ -117,7 +117,7 @@ def test_legacy_tool_undersort_pyproject(tmp_path: Path) -> None:
 
 
 def test_legacy_top_level_undersort_csort_toml(tmp_path: Path) -> None:
-    # Standalone preorder.toml also accepts a top-level [undersort] table.
+    # Standalone pyreorder.toml also accepts a top-level [undersort] table.
     csort_toml = tmp_path / "pyreorder.toml"
     csort_toml.write_text(
         textwrap.dedent(
@@ -134,13 +134,13 @@ def test_legacy_top_level_undersort_csort_toml(tmp_path: Path) -> None:
 
 
 def test_csort_class_methods_wins_over_legacy(tmp_path: Path) -> None:
-    # When both tables exist the preorder one (closer, scoped to class_methods)
+    # When both tables exist the pyreorder one (closer, scoped to class_methods)
     # takes precedence.
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
         textwrap.dedent(
             """\
-            [tool.preorder.class_methods]
+            [tool.pyreorder.class_methods]
             order = ["public", "protected", "private"]
 
             [tool.undersort]

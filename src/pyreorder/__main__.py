@@ -1,4 +1,4 @@
-"""Entry point for Clean Sort CLI."""
+"""Entry point for pyreorder CLI."""
 
 from __future__ import annotations
 

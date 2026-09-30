@@ -36,5 +36,5 @@ for name, cfg in samples:
     Path(f"tests/data/{name}_sorted.py").write_text(sort_source(src, cfg), encoding="utf-8")
 ```
 
-Every `*_sorted.py` file is idempotent: running preorder on it again changes
+Every `*_sorted.py` file is idempotent: running pyreorder on it again changes
 nothing.

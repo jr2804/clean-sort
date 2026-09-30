@@ -117,7 +117,7 @@ def test_would_change_with_transforms() -> None:
 
 
 def test_transforms_respect_file_disable() -> None:
-    src = "# preorder: off\ndef f():\n    import json\n    return 1\n"
+    src = "# pyreorder: off\ndef f():\n    import json\n    return 1\n"
     assert sort_source(src, Config(hoist_inline_imports=True)) == src
 
 

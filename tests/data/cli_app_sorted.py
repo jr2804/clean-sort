@@ -1,14 +1,14 @@
-"""A tiny Typer CLI — realistic module for preorder examples.
+"""A tiny Typer CLI — realistic module for pyreorder examples.
 
 This file demonstrates the most important real-world gotcha: module-level
 runtime setup (``app = typer.Typer()`` and the ``@app.command()`` decorators)
-forms a *barrier*. preorder recognises it cannot move the decorated functions away
+forms a *barrier*. pyreorder recognises it cannot move the decorated functions away
 from ``app``, so they stay grouped below it.
 
 Run::
 
-    preorder diff tests/data/cli_app_unsorted.py
-    preorder run  tests/data/cli_app_unsorted.py
+    pyreorder diff tests/data/cli_app_unsorted.py
+    pyreorder run  tests/data/cli_app_unsorted.py
 """
 
 from __future__ import annotations
