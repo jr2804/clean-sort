@@ -100,6 +100,15 @@ repos:
       - id: pyreorder
 ```
 
+### Submitting changes
+
+Contributions are welcome. Fork the repository, branch off `main`, and open a
+pull request. Bug reports and feature requests go to the
+[issue tracker](https://github.com/jr2804/pyreorder/issues). This project follows
+the [Code of Conduct](https://github.com/jr2804/pyreorder/blob/main/CODE_OF_CONDUCT.md).
+
+Run the full gate (above) before opening a pull request.
+
 ### Releasing
 
 Releases are automatic and use calendar versioning (`YYYY.M.N`).

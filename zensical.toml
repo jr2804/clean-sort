@@ -23,7 +23,6 @@ nav = [
   { "API reference" = "reference/api.md" },
   { "Development" = [
     { "Development" = "development.md" },
-    { "Contributing" = "contributing.md" },
     { "Code of Conduct" = "code_of_conduct.md" },
     { "ADRs" = "adr/index.md" },
   ] },

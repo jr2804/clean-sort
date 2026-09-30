@@ -171,9 +171,10 @@ the release process are on the
 
 ## Contributing
 
-Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers setup, the
-check and test tasks, and the release process; the same material is on the docs
-site under [Development](https://jr2804.github.io/pyreorder/development/).
+Contributions are welcome. Development setup, the check and test tasks,
+pre-commit hooks, and the release process are on the
+[Development](https://jr2804.github.io/pyreorder/development/) page;
+[CONTRIBUTING.md](CONTRIBUTING.md) has the short version.
 
 ## Support
 
