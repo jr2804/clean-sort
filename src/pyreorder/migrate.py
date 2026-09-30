@@ -75,10 +75,6 @@ CACHE_DIR_NEW = "pyreorder"
 PER_PROJECT_CACHE_OLD = ".csort-cache"
 PER_PROJECT_CACHE_NEW = ".pyreorder-cache"
 
-# Skills asset straggler (the only remaining 'csort' reference in the repo).
-SKILLS_ASSET_OLD = "csort.toml"
-SKILLS_ASSET_NEW = "pyreorder.toml"
-
 # Sentinels
 MIGRATE_SENTINEL_FILENAME = ".migrated-from-csort"
 
