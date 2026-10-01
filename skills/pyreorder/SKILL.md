@@ -150,6 +150,18 @@ block is left untouched for safety.
 Any `# noqa` linter-exclusion comment on a dissolved import is automatically
 stripped — the suppression was only justified by the TYPE_CHECKING guard.
 
+## Migrating from `csort` / `clean-sort`
+
+Earlier projects used the `csort` command, `[tool.csort]`, `csort.toml`, the
+`clean_sort` import and `# csort: off`. pyreorder renames the legacy config and
+cache **paths** itself on first run — once per machine, sentinel-gated — but
+**not** the `[tool.csort]` table, command invocations, the pre-commit hook, the
+dependency name, imports or the source directives. Those are manual edits, and a
+missed `[tool.csort]` rename silently reverts the project to default config.
+
+See [`references/migration.md`](references/migration.md) for the full name map,
+the search commands, and the verification steps.
+
 ## Programmatic API
 
 ```python
@@ -159,8 +171,9 @@ cfg = Config(strategies={"functions": "stepdown"})
 sorted_text = sort_source(source_text, cfg)
 ```
 
-See `scripts/sort_programmatically.py` for a runnable example,
-`references/` for the full config/classification reference, and `assets/` for a
+See `references/config.md` for the configuration and classification schema and
+`references/migration.md` for the `csort`/`clean-sort` rename checklist;
+`scripts/sort_programmatically.py` for a runnable example, and `assets/` for a
 sample file and config template.
 
 Five realistic, fully-formed example modules (each with unsorted input and
