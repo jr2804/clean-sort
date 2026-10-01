@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [2026.09.7] - 2026-09-30
+
 ### Added
 
 - **Documentation site is published**: `ci.yml` deploys the built site to GitHub
